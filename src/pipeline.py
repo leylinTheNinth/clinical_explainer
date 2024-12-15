@@ -1,30 +1,55 @@
-
-from datasets import load_dataset
-from typing import Dict, List, Generator
+from typing import Dict, List, Generator, Union, Optional
 import torch
+from datasets import load_dataset
 from transformers import AutoModelForMultipleChoice, AutoTokenizer
+from .explainers import BaseExplainer, ExplainerType
+from .explainers.lime_explainer import LIMEExplainer
+from .utils.explanation_saver import save_lime_explanation, load_lime_explanation
+
 
 class Pipeline:
-    def __init__(self, model_name: str, device: str = 'cuda' if torch.cuda.is_available() else 'cpu'):
+    def __init__(self, 
+                 model_name: str,
+                 explainer_types: Optional[Union[ExplainerType, List[ExplainerType]]] = None,
+                 device: str = 'cuda' if torch.cuda.is_available() else 'cpu'):
         """
-        Initialize pipeline for CasiMedicos-Arg dataset.
+        Initialize pipeline with specified explainer types.
+        
         Args:
             model_name: HuggingFace model name
+            explainer_types: ExplainerType.LIME, ExplainerType.SHAP, or list of them
             device: 'cuda' or 'cpu'
         """
         self.model_name = model_name
         self.device = device
         
-        # Components
+        if isinstance(explainer_types, ExplainerType):
+            explainer_types = [explainer_types]
+            
+        self.explainer_types = explainer_types
+        self.explainers = self._setup_explainers() if explainer_types else {}
+        
         self.tokenizer = None
         self.model = None
         
-        # Metrics
         self.metrics = {
             'total_processed': 0,
             'correct_predictions': 0,
             'errors': []
         }
+    
+    def _setup_explainers(self) -> Dict:
+        """Initialize requested explainers"""
+        explainers = {}
+        if not self.explainer_types:
+            return explainers
+            
+        for explainer_type in self.explainer_types:
+            if explainer_type == ExplainerType.LIME:
+                explainers['lime'] = LIMEExplainer()
+            elif explainer_type == ExplainerType.SHAP:
+                pass
+        return explainers
 
     def setup(self):
         """Initialize model and tokenizer"""
@@ -41,12 +66,10 @@ class Pipeline:
         """Generate preprocessed cases one at a time"""
         for case in cases:
             try:
-                # Remove None options
                 valid_options = {k: v for k, v in case['options'].items() if v is not None}
                 option_texts = list(valid_options.values())
                 option_keys = list(valid_options.keys())
                 
-                # Tokenize
                 encodings = self.tokenizer(
                     [case['full_question']] * len(option_texts),
                     option_texts,
@@ -56,7 +79,6 @@ class Pipeline:
                     max_length=512
                 )
                 
-                # Add batch dimension
                 processed = {
                     'input_ids': encodings['input_ids'].unsqueeze(0),
                     'attention_mask': encodings['attention_mask'].unsqueeze(0),
@@ -70,11 +92,53 @@ class Pipeline:
                 print(f"Error preprocessing case {case.get('id', 'unknown')}: {str(e)}")
                 yield {'error': str(e), 'original': case}
 
+
+    def _generate_explanations(self, case: Dict, predicted_idx: int) -> Dict:
+        """Generate explanations using all active explainers"""
+        explanations = {}
+        
+        for explainer_name, explainer in self.explainers.items():
+            try:
+                predict_fn = explainer.create_explainer_function(
+                    options=case['option_keys'],
+                    tokenizer=self.tokenizer,
+                    model=self.model,
+                    device=self.device
+                )
+                
+                exp = explainer.explain(
+                    question=case['original']['full_question'],
+                    predict_fn=predict_fn,
+                    class_names=[f"Option {k}" for k in case['option_keys']],
+                    target_label=int(predicted_idx)
+                )
+                case_info = {
+                    'id': case['original'].get('id', 'unknown'),
+                    'question': case['original']['full_question'],
+                    'correct_option': case['original']['correct_option'],
+                    'predicted_option': case['option_keys'][predicted_idx],
+                    'options': case['option_keys'],
+                    'probabilities': case['probabilities'].tolist() if 'probabilities' in case else None,
+                    'is_correct': str(case['option_keys'][predicted_idx]) == str(case['original']['correct_option'])
+                }
+                
+                # Save explanation
+                save_dir = save_lime_explanation(exp, case_info)
+                print(f"\nExplanations saved.....")
+                explanations[explainer_name] = {
+                    'exp': exp,
+                    'save_dir': save_dir
+                }
+                
+            except Exception as e:
+                raise RuntimeError(f"generate_explanation failed: {str(e)}")
+        
+        return explanations
+
     def _predict_generator(self, processed_cases: Generator) -> Generator:
-        """Generate predictions with detailed live output"""
+        """Generate predictions with explanations if requested"""
         for case in processed_cases:
             if 'error' in case:
-                print(f"\n❌ Error in case {case['original'].get('id', 'unknown')}: {case['error']}")
                 yield case
                 continue
                 
@@ -83,17 +147,14 @@ class Pipeline:
                 print(f"📋 Case ID: {case['original'].get('id', 'unknown')}")
                 print(f"Type: {case['original']['type']}")
                 
-                # Print full question
                 print("\n📝 Question:")
                 print(case['original']['full_question'])
                 
-                # Print all options
                 print("\n🔤 Options:")
                 valid_options = {k: v for k, v in case['original']['options'].items() if v is not None}
                 for key, text in valid_options.items():
                     print(f"Option {key}: {text}")
-                
-                # Make prediction
+
                 input_ids = case['input_ids'].to(self.device)
                 attention_mask = case['attention_mask'].to(self.device)
                 
@@ -104,12 +165,13 @@ class Pipeline:
                 probabilities = probs.cpu().numpy()
                 predicted_idx = probabilities.argmax()
                 predicted_option = case['option_keys'][predicted_idx]
-                
+
                 # Verify correct option is in our valid options
                 correct_option = case['original']['correct_option']
                 
                 self.metrics['total_processed'] += 1
                 is_correct = str(predicted_option) == str(correct_option)
+
                 if is_correct:
                     self.metrics['correct_predictions'] += 1
                 
@@ -132,8 +194,13 @@ class Pipeline:
                     'probabilities': probabilities,
                     'option_keys': case['option_keys'],
                     'original': case['original'],
-                    'is_correct': is_correct
+                    'is_correct': str(predicted_option) == str(case['original']['correct_option'])
                 }
+                
+                # Generate explanations if explainers exist
+                if self.explainers:
+                    explanations = self._generate_explanations(case, predicted_idx)
+                    result['explanations'] = explanations
                 
                 yield result
                     
@@ -141,33 +208,52 @@ class Pipeline:
                 print(f"\n❌ Error predicting case {case['original'].get('id', 'unknown')}: {str(e)}")
                 yield {'error': str(e), 'original': case['original']}
 
-    def process_dataset(self, split: str = 'validation', limit: int = None) -> List[Dict]:
+    def process_dataset(self, 
+                       split: str = 'validation', 
+                       limit: int = None,
+                       explainer_types: Optional[Union[ExplainerType, List[ExplainerType]]] = None) -> List[Dict]:
         """
-        Process CasiMedicos dataset.
+        Process dataset with specified explainers.
+        
         Args:
             split: 'train', 'validation', or 'test'
-            limit: number of cases to process (None for all cases)
+            limit: number of cases to process
+            explainer_types: Override default explainers for this run
         """
-        print(f"Loading CasiMedicos-Arg {split} split...")
-        dataset = load_dataset("HiTZ/casimedicos-exp", "en")[split]
+        # Temporarily override explainers if requested
+        original_explainers = self.explainers
+        if explainer_types:
+            if isinstance(explainer_types, ExplainerType):
+                explainer_types = [explainer_types]
+            self.explainer_types = explainer_types
+            self.explainers = self._setup_explainers()
         
-        # If limit is set, only take that many cases
-        if limit:
-            dataset = dataset.select(range(min(limit, len(dataset))))
-            print(f"Processing {limit} cases...")
-        else:
-            print(f"Processing {len(dataset)} cases...")
+        try:
+            print(f"Loading CasiMedicos-Arg {split} split...")
+            dataset = load_dataset("HiTZ/casimedicos-exp", "en")[split]
+            
+            # If limit is set, only take that many cases
+            if limit:
+                dataset = dataset.select(range(min(limit, len(dataset))))
+                print(f"Processing {limit} cases...")
+            else:
+                print(f"Processing {len(dataset)} cases...")
+            
+            # Process through pipeline
+            processed_cases = self._preprocess_generator(dataset)
+            results = list(self._predict_generator(processed_cases))
+            
+            # Print metrics
+            print(f"\nProcessing complete!")
+            print(f"Total processed: {self.metrics['total_processed']}")
+            print(f"Correct predictions: {self.metrics['correct_predictions']}")
+            if self.metrics['total_processed'] > 0:
+                accuracy = self.metrics['correct_predictions'] / self.metrics['total_processed']
+                print(f"Accuracy: {accuracy:.2%}")
+
+            return results
         
-        # Process through pipeline
-        processed_cases = self._preprocess_generator(dataset)
-        results = list(self._predict_generator(processed_cases))
-        
-        # Print metrics
-        print(f"\nProcessing complete!")
-        print(f"Total processed: {self.metrics['total_processed']}")
-        print(f"Correct predictions: {self.metrics['correct_predictions']}")
-        if self.metrics['total_processed'] > 0:
-            accuracy = self.metrics['correct_predictions'] / self.metrics['total_processed']
-            print(f"Accuracy: {accuracy:.2%}")
-        
-        return results
+        finally:
+            # Restore original explainers
+            if explainer_types:
+                self.explainers = original_explainers
