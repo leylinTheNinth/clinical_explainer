@@ -11,11 +11,14 @@ class BaseExplainer(ABC):
     @abstractmethod
     def create_explainer_function(self, options: List[str], tokenizer: Any, model: Any, device: str) -> Callable:
         """Creates prediction function with necessary context"""
-        pass
+        raise NotImplementedError
+
+
     
     @abstractmethod
-    def explain(self, question: str, predict_fn: Callable, class_names: List[str], target_label: int):
+    def explain(self, question: str, predict_fn: Callable, class_names: List[str], target_label: int, **kwargs):
         """Generates explanation using the prediction function"""
-        pass
+        raise NotImplementedError
+
 
 __all__ = ['BaseExplainer', 'ExplainerType']

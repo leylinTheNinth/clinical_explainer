@@ -4,14 +4,16 @@ from datasets import load_dataset
 from transformers import AutoModelForMultipleChoice, AutoTokenizer
 from .explainers import BaseExplainer, ExplainerType
 from .explainers.lime_explainer import LIMEExplainer
-from .utils.explanation_saver import save_lime_explanation, load_lime_explanation
+from .explainers.shap_explainer import SHAPExplainer
+from .utils.explanation_saver import save_explanation
 
 
 class Pipeline:
     def __init__(self, 
                  model_name: str,
                  explainer_types: Optional[Union[ExplainerType, List[ExplainerType]]] = None,
-                 device: str = 'cuda' if torch.cuda.is_available() else 'cpu'):
+                 device: str = 'cuda' if torch.cuda.is_available() else 'cpu',
+                 background_samples: int = 100):
         """
         Initialize pipeline with specified explainer types.
         
@@ -19,9 +21,13 @@ class Pipeline:
             model_name: HuggingFace model name
             explainer_types: ExplainerType.LIME, ExplainerType.SHAP, or list of them
             device: 'cuda' or 'cpu'
+            background_samples: Number of background samples for SHAP
+
         """
         self.model_name = model_name
         self.device = device
+        self.background_samples = background_samples
+        self.background_dataset = None  # Will be populated in setup()
         
         if isinstance(explainer_types, ExplainerType):
             explainer_types = [explainer_types]
@@ -48,7 +54,8 @@ class Pipeline:
             if explainer_type == ExplainerType.LIME:
                 explainers['lime'] = LIMEExplainer()
             elif explainer_type == ExplainerType.SHAP:
-                pass
+                explainers['shap'] = SHAPExplainer()
+
         return explainers
 
     def setup(self):
@@ -58,6 +65,16 @@ class Pipeline:
             self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
             self.model = AutoModelForMultipleChoice.from_pretrained(self.model_name).to(self.device)
             self.model.eval()
+
+            # Load background dataset for SHAP if SHAP explainer is requested
+            if any(exp_type == ExplainerType.SHAP for exp_type in self.explainer_types):
+                print("Loading background dataset for SHAP...")
+                dataset = load_dataset("HiTZ/casimedicos-exp", "en")
+                train_data = dataset['train']
+                self.background_dataset = [case['full_question'] 
+                                         for case in list(train_data)[:self.background_samples]]
+                print(f"Loaded {len(self.background_dataset)} background samples")
+            
             return self
         except Exception as e:
             raise RuntimeError(f"Pipeline setup failed: {str(e)}")
@@ -110,7 +127,8 @@ class Pipeline:
                     question=case['original']['full_question'],
                     predict_fn=predict_fn,
                     class_names=[f"Option {k}" for k in case['option_keys']],
-                    target_label=int(predicted_idx)
+                    target_label=int(predicted_idx),
+                    background_dataset=self.background_dataset if explainer_name == 'shap' else None
                 )
                 case_info = {
                     'id': case['original'].get('id', 'unknown'),
@@ -123,8 +141,9 @@ class Pipeline:
                 }
                 
                 # Save explanation
-                save_dir = save_lime_explanation(exp, case_info)
+                save_dir = save_explanation(exp, case_info, explainer_type=explainer_name)
                 print(f"\nExplanations saved.....")
+            
                 explanations[explainer_name] = {
                     'exp': exp,
                     'save_dir': save_dir

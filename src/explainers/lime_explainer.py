@@ -100,7 +100,7 @@ class LIMEExplainer(BaseExplainer):
         
         return prediction_function
     
-    def explain(self, question: str, predict_fn: callable, class_names: List[str], target_label) -> Dict:
+    def explain(self, question: str, predict_fn: callable, class_names: List[str], target_label: int, **kwargs) -> Dict:
         target_label = int(target_label)
         explainer = None
         exp = None
