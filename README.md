@@ -19,7 +19,7 @@ Dataset Links:
 - Support for any HuggingFace multiple-choice model
 - Detailed prediction outputs with confidence scores
 - Memory-efficient processing using generators
-- Explainability using LIME with visualization
+- Explainability using LIME and SHAP with visualization
 - Save and load explanations for later analysis
 
 
@@ -38,20 +38,13 @@ from clinical_explainer.src.explainers import ExplainerType
 # Initialize pipeline with LIME explainer
 pipeline = Pipeline(
     model_name="RUI525/PubMedBERT-finetune-MedMCQA-w-context",
-    explainer_types=ExplainerType.LIME
+    explainer_types=[ExplainerType.LIME, ExplainerType.SHAP]
 )
 pipeline.setup()
 
 # Process cases and get explanations
 results = pipeline.process_dataset('validation', limit=10)
 
-# Save explanations
-from clinical_explainer.src.utils.explanation_saver import save_lime_explanation
-save_dir = 'explanations'
-for result in results:
-    if 'explanations' in result:
-        exp = result['explanations']['lime']['exp']
-        save_lime_explanation(exp, result, save_dir)
 ```
 
 Example output:
@@ -85,6 +78,7 @@ Confidence: 42.77%
 - Transformers
 - Datasets
 - Lime
+- Shap
 
 Citation:
 ```bibtex
