@@ -21,4 +21,4 @@ for package in required_packages:
 # Now import the Pipeline
 from .pipeline import Pipeline
 
-__version__ = '1.0.0'
+__version__ = '1.1.0'
