@@ -107,7 +107,8 @@ class EncoderStrategy(ProcessingStrategy):
                 'probabilities': probs.cpu().numpy(),
                 'option_keys': option_keys,
                 'original': processed_case['original'],
-                'is_correct': is_correct
+                'is_correct': is_correct,
+                'predicted_idx': predicted_idx  
             }
 
             del outputs
@@ -153,7 +154,7 @@ class EncoderStrategy(ProcessingStrategy):
                         question=prediction['original']['full_question'],
                         predict_fn=predict_fn,
                         class_names=[f"Option {k}" for k in prediction['option_keys']],
-                        target_label=prediction['predicted_idx'],
+                        target_label= int(prediction['predicted_idx']),
                         background_dataset=self.background_dataset if name == 'shap' else None
                     )
                     
