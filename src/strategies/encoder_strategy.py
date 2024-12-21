@@ -60,11 +60,14 @@ class EncoderStrategy(ProcessingStrategy):
                 truncation=True,
                 max_length=512
             )
-            
+            # Move tensors to correct device immediately after tokenization
+            input_ids = encodings['input_ids'].unsqueeze(0).to(self.device)
+            attention_mask = encodings['attention_mask'].unsqueeze(0).to(self.device)
+        
             # Prepare model inputs
             processed = {
-                'input_ids': encodings['input_ids'].unsqueeze(0),
-                'attention_mask': encodings['attention_mask'].unsqueeze(0),
+                'input_ids': input_ids,
+                'attention_mask': attention_mask,
                 'option_keys': option_keys,
                 'original': case  # Keep original case for reference
             }
@@ -109,7 +112,7 @@ class EncoderStrategy(ProcessingStrategy):
 
             del outputs
             torch.cuda.empty_cache()
-            
+
             return result
                 
         except Exception as e:
