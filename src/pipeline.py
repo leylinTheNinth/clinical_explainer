@@ -8,13 +8,17 @@ class Pipeline:
                  model_name: str, 
                  model_type: ModelType,
                  explainer_types: Optional[List[str]] = None,
-                 device: str = None):
+                 device: str = None,
+                 sampling_ratio: float = 0.0,
+                 max_length: int = 256):
         """
         Initialize pipeline with specified model and explainers
         Args:
             model_name: HuggingFace model name/path
             model_type: Type of model (ENCODER/DECODER)
             explainer_types: List of explainer types to use ('lime', 'shap', 'TokenShap', etc.)
+            sampling_ratio: Sampling ratio for TokenSHAP (decoder only)
+            max_length: Maximum sequence length (decoder only)
         """
         if device is None:
             device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -23,7 +27,9 @@ class Pipeline:
             model_type=model_type,
             model_name=model_name,
             explainer_types=explainer_types,
-            device=device
+            device=device,
+            sampling_ratio=sampling_ratio,
+            max_length=max_length
         )
         # For tracking metrics
         self.metrics = {
