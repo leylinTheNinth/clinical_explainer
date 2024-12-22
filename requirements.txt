@@ -1,0 +1,10 @@
+datasets
+transformers
+torch
+lime
+shap
+tokenshap
+bitsandbytes
+accelerate
+sentencepiece
+protobuf
