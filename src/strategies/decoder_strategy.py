@@ -14,11 +14,10 @@ class DecoderStrategy(ProcessingStrategy):
                  explainer_types: Optional[List[str]] = None,
                  max_length: int = 256,
                  sampling_ratio: float = 0.0):
-        super().__init__(model, tokenizer, explainer_types)
         self.device = next(model.parameters()).device
         self.max_length = max_length
         self.sampling_ratio = sampling_ratio
-        
+        super().__init__(model, tokenizer, explainer_types)
     def _setup_explainers(self) -> Dict:
         """Setup TokenSHAP explainer"""
         explainers = {}
@@ -108,7 +107,7 @@ class DecoderStrategy(ProcessingStrategy):
                     'explanation': explanation_result,
                     'save_path': save_path
                 }
-                
+
             return explanations
     
         finally:
