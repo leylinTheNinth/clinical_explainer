@@ -5,13 +5,14 @@ import torch
 from transformers import (
     AutoModelForMultipleChoice,
     AutoModelForCausalLM,
-    AutoTokenizer
+    AutoTokenizer,
+    BitsAndBytesConfig
 )
 
 class ModelType(Enum):
     """Enum for different types of models"""
     ENCODER = auto()  # BERT-style models
-    DECODER = auto()  # GPT/Mistral-style models
+    DECODER = auto()  # GPT-style models
 
 class ProcessingStrategy(ABC):
     """Base class for all model processing strategies"""
@@ -32,6 +33,7 @@ class ProcessingStrategy(ABC):
     def _setup_explainers(self) -> Dict:
         """Setup only the requested explainer types"""
         explainers = {}
+        return explainers
         
     @abstractmethod
     def preprocess(self, case: Dict) -> Dict:
@@ -79,20 +81,30 @@ class StrategyFactory:
         """
         try:
             if model_type == ModelType.DECODER:
-                raise RuntimeError(f"Decoder strategy is not implemented.")
-                '''
-                # Load decoder (GPT-style) model with optional quantization
+                # Check if model needs quantization
+                should_quantize = StrategyFactory._should_quantize(model_name)
+                
+                if should_quantize:
+                    quantization_config = BitsAndBytesConfig(
+                        load_in_8bit=True,
+                        llm_int8_threshold=6.0,
+                        llm_int8_has_fp16_weight=False
+                    )
+                else:
+                    quantization_config = None
+                    
                 model = AutoModelForCausalLM.from_pretrained(
                     model_name,
-                    device_map="auto",
-                    load_in_8bit=kwargs.get('quantize', True),
+                    quantization_config=quantization_config,
+                    device_map="auto" if should_quantize else None,
                     torch_dtype=torch.float16
-                )
+                ).to(device)
+
                 tokenizer = AutoTokenizer.from_pretrained(model_name)
                 # Import here to avoid circular imports
                 from .decoder_strategy import DecoderStrategy
                 return DecoderStrategy(model, tokenizer, explainer_types)
-                '''
+            
             elif model_type == ModelType.ENCODER:
                 # Load encoder (BERT-style) model
                 model = AutoModelForMultipleChoice.from_pretrained(model_name).to(device)
@@ -107,3 +119,16 @@ class StrategyFactory:
                 
         except Exception as e:
             raise RuntimeError(f"Failed to create strategy: {str(e)}")
+    
+    @staticmethod
+    def _should_quantize(model_name: str) -> bool:
+        """Determine if model needs quantization based on size/type"""
+        # Models that typically need quantization
+        large_models = [
+            "mistralai/Mistral-7B-Instruct-v0.2",
+            "meta-llama/Llama-2-7b",
+            "mistralai/Mixtral-8x7B",
+        ]
+        
+        # Check if model is in large models list
+        return any(model_name.startswith(prefix) for prefix in large_models)

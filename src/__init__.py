@@ -14,11 +14,11 @@ def import_or_install(package_name):
         subprocess.check_call([sys.executable, "-m", "pip", "install", package_name])
 
 # Required packages
-required_packages = ['datasets', 'transformers', 'torch', 'lime', 'shap']
+required_packages = ['datasets', 'transformers', 'torch', 'lime', 'shap', 'tokenshap', 'bitsandbytes']
 for package in required_packages:
     import_or_install(package)
 
 # Now import the Pipeline
 from .pipeline import Pipeline
 
-__version__ = '1.1.0'
+__version__ = '1.1.1'
