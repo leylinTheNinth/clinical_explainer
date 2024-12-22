@@ -56,6 +56,10 @@ class ProcessingStrategy(ABC):
                 print(f"Error in {name} explainer: {str(e)}")
         return explanations
 
+
+from .encoder_strategy import EncoderStrategy
+from .decoder_strategy import DecoderStrategy
+
 class StrategyFactory:
     """Factory for creating appropriate processing strategy"""
     
@@ -83,26 +87,27 @@ class StrategyFactory:
             if model_type == ModelType.DECODER:
                 # Check if model needs quantization
                 should_quantize = StrategyFactory._should_quantize(model_name)
-                
                 if should_quantize:
                     quantization_config = BitsAndBytesConfig(
                         load_in_8bit=True,
                         llm_int8_threshold=6.0,
                         llm_int8_has_fp16_weight=False
                     )
+                    # For quantized models, let device_map handle placement
+                    model = AutoModelForCausalLM.from_pretrained(
+                        model_name,
+                        quantization_config=quantization_config,
+                        device_map="auto",
+                        torch_dtype=torch.float16
+                    )
+                    print("\n8bit quantization applied.\n")
                 else:
-                    quantization_config = None
+                    model = AutoModelForCausalLM.from_pretrained(
+                        model_name,
+                        torch_dtype=torch.float16
+                    ).to(device)
                     
-                model = AutoModelForCausalLM.from_pretrained(
-                    model_name,
-                    quantization_config=quantization_config,
-                    device_map="auto" if should_quantize else None,
-                    torch_dtype=torch.float16
-                ).to(device)
-
                 tokenizer = AutoTokenizer.from_pretrained(model_name)
-                # Import here to avoid circular imports
-                from .decoder_strategy import DecoderStrategy
                 return DecoderStrategy(model, tokenizer, explainer_types)
             
             elif model_type == ModelType.ENCODER:
@@ -110,10 +115,7 @@ class StrategyFactory:
                 model = AutoModelForMultipleChoice.from_pretrained(model_name).to(device)
                 model.eval()
                 tokenizer = AutoTokenizer.from_pretrained(model_name)
-                # Import here to avoid circular imports
-                from .encoder_strategy import EncoderStrategy
                 return EncoderStrategy(model, tokenizer, explainer_types)
-                
             else:
                 raise ValueError(f"Unknown model type: {model_type}")
                 
