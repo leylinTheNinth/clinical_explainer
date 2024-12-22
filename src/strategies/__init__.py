@@ -69,6 +69,8 @@ class StrategyFactory:
         model_name: str,
         explainer_types: Optional[List[str]] = None,
         device: str = "cuda" if torch.cuda.is_available() else "cpu",
+        sampling_ratio: float = 0.0,  
+        max_length: int = 256,
         **kwargs
     ) -> ProcessingStrategy:
         """
@@ -108,7 +110,11 @@ class StrategyFactory:
                     ).to(device)
                     
                 tokenizer = AutoTokenizer.from_pretrained(model_name)
-                return DecoderStrategy(model, tokenizer, explainer_types)
+                return DecoderStrategy(model, 
+                                       tokenizer, 
+                                       explainer_types, 
+                                       max_length=max_length,
+                                       sampling_ratio=sampling_ratio)
             
             elif model_type == ModelType.ENCODER:
                 # Load encoder (BERT-style) model
