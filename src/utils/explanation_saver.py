@@ -160,3 +160,84 @@ def save_explanation(exp: Any,
         return save_shap_explanation(exp, case_info, save_dir)
     else:
         raise ValueError(f"Unknown explainer type: {explainer_type}")
+    
+
+def save_decoder_outputs(token_shap_exp: Any, 
+                        case_info: Dict,
+                        prediction: Dict,
+                        save_dir: str = "explanations") -> str:
+    """
+    Save both TokenSHAP explanation and model prediction for decoder models.
+    
+    Args:
+        token_shap_exp: TokenSHAP object with analysis
+        case_info: Dict containing case details
+        prediction: Dict containing model's prediction
+        save_dir: Directory to save outputs
+    
+    Returns:
+        str: Path where outputs were saved
+    """
+    # Create timestamp and directory
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    case_id = case_info['id']
+    case_dir = os.path.join(save_dir, f"decoder_case_{case_id}_{timestamp}")
+    os.makedirs(case_dir, exist_ok=True)
+    
+    try:
+        # Save TokenSHAP explanation
+        exp_path = os.path.join(case_dir, 'token_shap.pkl')
+        with open(exp_path, 'wb') as f:
+            pickle.dump(token_shap_exp, f)
+        
+        # Save prediction
+        pred_path = os.path.join(case_dir, 'prediction.pkl')
+        with open(pred_path, 'wb') as f:
+            pickle.dump(prediction, f)
+            
+        # Save case info
+        info_path = os.path.join(case_dir, 'case_info.pkl')
+        with open(info_path, 'wb') as f:
+            pickle.dump(case_info, f)
+            
+        return case_dir
+        
+    except Exception as e:
+        print(f"Error saving decoder outputs: {str(e)}")
+        raise
+
+def load_decoder_outputs(case_dir: str) -> Dict:
+    """
+    Load saved decoder outputs (TokenSHAP and prediction)
+    
+    Args:
+        case_dir: Directory containing saved decoder outputs
+        
+    Returns:
+        Dict containing loaded TokenSHAP explanation and prediction
+    """
+    try:
+        # Load TokenSHAP explanation
+        exp_path = os.path.join(case_dir, 'token_shap.pkl')
+        with open(exp_path, 'rb') as f:
+            token_shap_exp = pickle.load(f)
+            
+        # Load prediction
+        pred_path = os.path.join(case_dir, 'prediction.pkl')
+        with open(pred_path, 'rb') as f:
+            prediction = pickle.load(f)
+            
+        # Load case info
+        info_path = os.path.join(case_dir, 'case_info.pkl')
+        with open(info_path, 'rb') as f:
+            case_info = pickle.load(f)
+            
+        return {
+            'token_shap': token_shap_exp,
+            'prediction': prediction,
+            'case_info': case_info
+        }
+        
+    except Exception as e:
+        print(f"Error loading decoder outputs from {case_dir}: {str(e)}")
+        raise

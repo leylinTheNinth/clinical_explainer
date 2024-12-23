@@ -3,6 +3,7 @@ import torch
 from token_shap import StringSplitter, TokenSHAP
 from . import ProcessingStrategy
 from ..explainers import TokenSHAPModel
+from ..utils import save_decoder_outputs
 
 class DecoderStrategy(ProcessingStrategy):
     def __init__(self, 
@@ -18,25 +19,27 @@ class DecoderStrategy(ProcessingStrategy):
         # Filter valid options
         options = {k: v for k, v in case['options'].items() if v is not None}
         
-        # Prompt for prediction (with explanation request)
-        prediction_prompt = (
+        # Base prompt structure that's common to both
+        base_prompt = (
+            "You are a medical expert analyzing this clinical case.\n\n"
             "Clinical Case:\n"
             f"{case['full_question']}\n\n"
             "Options:\n"
         )
         for opt_num, opt_text in options.items():
-            prediction_prompt += f"{opt_num}: {opt_text}\n"
-        prediction_prompt += "\nWhich option is most appropriate? Explain your choice."
+            base_prompt += f"{opt_num}: {opt_text}\n"
 
-        # Prompt for TokenSHAP (just the case and options)
-        token_shap_prompt = (
-            "Clinical Case:\n"
-            f"{case['full_question']}\n\n"
-            "Options:\n"
+        # For prediction 
+        prediction_prompt = base_prompt + (
+            "\nAnalyze this case and provide:\n"
+            "1. Your selected option (number only)\n"
+            "2. Medical reasoning behind your decision\n"
+            "Your Response: "
         )
-        for opt_num, opt_text in options.items():
-            token_shap_prompt += f"{opt_num}: {opt_text}\n"
-        token_shap_prompt += "\nWhich option is most appropriate?"
+
+        # For TokenSHAP, keep it focused on decision
+        token_shap_prompt = base_prompt + "\nSelect the most appropriate option (number only).\nYour Response: "
+
 
         return {
             'prediction_prompt': prediction_prompt,
@@ -59,12 +62,13 @@ class DecoderStrategy(ProcessingStrategy):
             with torch.no_grad():
                 outputs = self.model.generate(
                     **inputs,
-                    max_new_tokens=150,
+                    max_new_tokens=512,
                     pad_token_id=self.tokenizer.pad_token_id
                 )
             
             response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-            
+            print(f"\nModel Response:\n{response}\n")
+
             return {
                 'response': response,
                 'original': processed_case['original'],
@@ -82,14 +86,26 @@ class DecoderStrategy(ProcessingStrategy):
             
             explanation = token_shap.analyze(
                 processed_case['token_shap_prompt'],
-                sampling_ratio=0.0,
+                sampling_ratio=0.0, # if increased processing time will also increase 
                 print_highlight_text=True
             )
-            
+
             print(f"\nTokenSHAP Analysis:")
             token_shap.print_colored_text()
 
-            return {'token_shap': explanation}
+            save_path = save_decoder_outputs(
+                token_shap_exp=token_shap,
+                case_info=prediction['original'],  # Using the original case info
+                prediction=prediction
+            )
+        
+            return {
+                'token_shap': {
+                    'exp': token_shap,
+                    'shapley_values': token_shap.shapley_values,
+                    'save_path': save_path
+                }
+            }
             
         except Exception as e:
             raise RuntimeError(f"TokenSHAP analysis failed: {str(e)}")
