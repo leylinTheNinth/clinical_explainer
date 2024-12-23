@@ -1,117 +1,91 @@
-from typing import Dict, List, Optional
+from typing import Dict
 import torch
-import gc
+from token_shap import StringSplitter, TokenSHAP
 from . import ProcessingStrategy
-from ..utils.explanation_saver import save_explanation
-from ..explainers.token_shap_explainer import TokenSHAPExplainer
+from ..explainers import TokenSHAPModel
 
 class DecoderStrategy(ProcessingStrategy):
-    """Strategy for handling GPT/Mistral style decoder models"""
-    
     def __init__(self, 
                  model, 
                  tokenizer, 
-                 explainer_types: Optional[List[str]] = None,
-                 max_length: int = 256,
-                 sampling_ratio: float = 0.0):
-        self.device = next(model.parameters()).device
+                 max_length: int = 256):
+        super().__init__(model, tokenizer, None)  # No explainer_types needed
         self.max_length = max_length
-        self.sampling_ratio = sampling_ratio
-        super().__init__(model, tokenizer, explainer_types)
-    def _setup_explainers(self) -> Dict:
-        """Setup TokenSHAP explainer"""
-        explainers = {}
+        self.token_shap_wrapper = TokenSHAPModel(model, tokenizer, max_length)
         
-        if 'token_shap' in self.explainer_types:
-            explainers['token_shap'] = TokenSHAPExplainer(
-                sampling_ratio=self.sampling_ratio,
-                max_length=self.max_length
-            )
-        
-        return explainers
-
     def preprocess(self, case: Dict) -> Dict:
-        """Preprocess a clinical case for decoder models"""
+        """Prepare prompts for both prediction and TokenSHAP"""
+        # Filter valid options
+        options = {k: v for k, v in case['options'].items() if v is not None}
+        
+        # Prompt for prediction (with explanation request)
+        prediction_prompt = (
+            "Clinical Case:\n"
+            f"{case['full_question']}\n\n"
+            "Options:\n"
+        )
+        for opt_num, opt_text in options.items():
+            prediction_prompt += f"{opt_num}: {opt_text}\n"
+        prediction_prompt += "\nWhich option is most appropriate? Explain your choice."
+
+        # Prompt for TokenSHAP (just the case and options)
+        token_shap_prompt = (
+            "Clinical Case:\n"
+            f"{case['full_question']}\n\n"
+            "Options:\n"
+        )
+        for opt_num, opt_text in options.items():
+            token_shap_prompt += f"{opt_num}: {opt_text}\n"
+        token_shap_prompt += "\nWhich option is most appropriate?"
+
+        return {
+            'prediction_prompt': prediction_prompt,
+            'token_shap_prompt': token_shap_prompt,
+            'options': options,
+            'original': case
+        }
+
+    def predict(self, processed_case: Dict) -> Dict:
+        """Get model's prediction with explanation"""
         try:
-            valid_options = {k: v for k, v in case['options'].items() if v is not None}
+            inputs = self.tokenizer(
+                processed_case['prediction_prompt'],
+                return_tensors='pt',
+                padding=True,
+                truncation=True,
+                max_length=self.max_length
+            ).to(self.model.device)
             
-            prompt = (
-                f"Case:\n{case['full_question']}\n\n"
-                f"Options:\n" +
-                "\n".join(f"{k}. {v}" for k, v in valid_options.items()) +
-                "\n\nProvide the option number and brief explanation."
-            )
-                
+            with torch.no_grad():
+                outputs = self.model.generate(
+                    **inputs,
+                    max_new_tokens=150,
+                    pad_token_id=self.tokenizer.pad_token_id
+                )
+            
+            response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+            
             return {
-                'prompt': prompt,
-                'options': valid_options,
-                'original': case
+                'response': response,
+                'original': processed_case['original']
             }
             
         except Exception as e:
-            raise RuntimeError(f"Error preprocessing case {case.get('id', 'unknown')}: {str(e)}")
-
-    def predict(self, processed_case: Dict) -> Dict:
-        """Generate model prediction"""
-        try:
-            # Create predict function for current case
-            predict_fn = self.explainers['token_shap'].create_explainer_function(
-                self.model, 
-                self.tokenizer
-            )
-            
-            # Get model response
-            response = predict_fn(processed_case['prompt'])
-            
-            result = {
-                'response': response,
-                'original': processed_case['original'],
-                'options': processed_case['options'],
-                'predict_fn': predict_fn  # Save for explanation phase
-            }
-            
-            return result
-            
-        finally:
-            torch.cuda.empty_cache()
-            gc.collect()
+            raise RuntimeError(f"Prediction failed: {str(e)}")
 
     def explain(self, processed_case: Dict, prediction: Dict) -> Dict:
-        """Generate explanations using TokenSHAP"""
-        explanations = {}
-        
+        """Use TokenSHAP to analyze important tokens in option selection"""
         try:
-            if 'token_shap' in self.explainers:
-                # Generate TokenSHAP explanation
-                explanation_result = self.explainers['token_shap'].explain(
-                    processed_case['prompt'],
-                    prediction['predict_fn']
-                )
-                
-                # Prepare combined results
-                explanation_data = {
-                    'token_shap_values': explanation_result['token_shap_values'],
-                    'visualization': explanation_result['visualization'],
-                    'model_response': prediction['response'],
-                    'case_id': processed_case['original']['id'],
-                    'options': processed_case['options']
-                }
-                
-                # Save for future use
-                save_path = save_explanation(
-                    exp=explanation_data,
-                    case_info=processed_case['original'],
-                    explainer_type='decoder_combined'
-                )
-                explanations['token_shap'] = {
-                    'explanation': explanation_result,
-                    'save_path': save_path
-                }
-
-            return explanations
-    
-        finally:
-            # Cleanup
-            del prediction['predict_fn']  # Remove the prediction function
-            torch.cuda.empty_cache()
-            gc.collect()
+            splitter = StringSplitter()
+            token_shap = TokenSHAP(self.token_shap_wrapper, splitter)
+            
+            explanation = token_shap.analyze(
+                processed_case['token_shap_prompt'],
+                sampling_ratio=0.0,
+                print_highlight_text=True
+            )
+            
+            return {'token_shap': explanation}
+            
+        except Exception as e:
+            raise RuntimeError(f"TokenSHAP analysis failed: {str(e)}")

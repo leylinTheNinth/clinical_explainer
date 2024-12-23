@@ -28,7 +28,6 @@ class Pipeline:
             model_name=model_name,
             explainer_types=explainer_types,
             device=device,
-            sampling_ratio=sampling_ratio,
             max_length=max_length
         )
         # For tracking metrics
