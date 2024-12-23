@@ -161,14 +161,12 @@ def save_explanation(exp: Any,
     else:
         raise ValueError(f"Unknown explainer type: {explainer_type}")
     
-
 def save_decoder_outputs(token_shap_exp: Any, 
                         case_info: Dict,
                         prediction: Dict,
                         save_dir: str = "explanations") -> str:
     """
     Save both TokenSHAP explanation and model prediction for decoder models.
-    
     Args:
         token_shap_exp: TokenSHAP object with analysis
         case_info: Dict containing case details
@@ -178,17 +176,20 @@ def save_decoder_outputs(token_shap_exp: Any,
     Returns:
         str: Path where outputs were saved
     """
-    # Create timestamp and directory
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     case_id = case_info['id']
     case_dir = os.path.join(save_dir, f"decoder_case_{case_id}_{timestamp}")
     os.makedirs(case_dir, exist_ok=True)
     
     try:
-        # Save TokenSHAP explanation
+        essential_shap_data = {
+            'shapley_values': token_shap_exp.shapley_values,
+            'tokens': token_shap_exp.baseline_text  
+        }
+        
         exp_path = os.path.join(case_dir, 'token_shap.pkl')
         with open(exp_path, 'wb') as f:
-            pickle.dump(token_shap_exp, f)
+            pickle.dump(essential_shap_data, f)
         
         # Save prediction
         pred_path = os.path.join(case_dir, 'prediction.pkl')
@@ -208,19 +209,22 @@ def save_decoder_outputs(token_shap_exp: Any,
 
 def load_decoder_outputs(case_dir: str) -> Dict:
     """
-    Load saved decoder outputs (TokenSHAP and prediction)
+    Load saved decoder outputs (TokenSHAP essentials and prediction)
     
     Args:
         case_dir: Directory containing saved decoder outputs
         
     Returns:
-        Dict containing loaded TokenSHAP explanation and prediction
+        Dict containing:
+            - token_shap: Dict with shapley_values and tokens
+            - prediction: Dict with model response
+            - case_info: Original case information
     """
     try:
-        # Load TokenSHAP explanation
+        # Load TokenSHAP essential data
         exp_path = os.path.join(case_dir, 'token_shap.pkl')
         with open(exp_path, 'rb') as f:
-            token_shap_exp = pickle.load(f)
+            token_shap_data = pickle.load(f)  # Will contain shapley_values and tokens
             
         # Load prediction
         pred_path = os.path.join(case_dir, 'prediction.pkl')
@@ -233,7 +237,7 @@ def load_decoder_outputs(case_dir: str) -> Dict:
             case_info = pickle.load(f)
             
         return {
-            'token_shap': token_shap_exp,
+            'token_shap': token_shap_data,  # Dict with shapley_values and tokens
             'prediction': prediction,
             'case_info': case_info
         }
