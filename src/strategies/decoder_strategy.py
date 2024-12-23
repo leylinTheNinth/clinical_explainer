@@ -67,7 +67,8 @@ class DecoderStrategy(ProcessingStrategy):
             
             return {
                 'response': response,
-                'original': processed_case['original']
+                'original': processed_case['original'],
+                'is_correct': False  # Temporary fix
             }
             
         except Exception as e:
@@ -85,6 +86,9 @@ class DecoderStrategy(ProcessingStrategy):
                 print_highlight_text=True
             )
             
+            print(f"\nTokenSHAP Analysis:")
+            token_shap.print_colored_text()
+
             return {'token_shap': explanation}
             
         except Exception as e:
