@@ -73,7 +73,7 @@ class TokenSHAPModel:
                 output_ids = self.model.generate(
                     input_ids=input_ids,
                     attention_mask=attention_mask,
-                    max_new_tokens=256,  # Could make this configurable
+                    max_new_tokens=32,  # Could make this configurable
                     pad_token_id=self.tokenizer.pad_token_id
                 )
 
