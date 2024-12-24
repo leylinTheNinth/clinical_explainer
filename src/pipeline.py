@@ -10,7 +10,9 @@ class Pipeline:
                  explainer_types: Optional[List[str]] = None,
                  device: str = None,
                  sampling_ratio: float = 0.0,
-                 max_length: int = 256):
+                 max_length: int = 256,
+                 token_shap_max_tokens: int = 32,
+                 explanation_max_tokens: int = 256,):
         """
         Initialize pipeline with specified model and explainers
         Args:
@@ -22,13 +24,22 @@ class Pipeline:
         """
         if device is None:
             device = "cuda" if torch.cuda.is_available() else "cpu"
+
+        print(f"\n=== Pipeline Initialization ===")
+        print(f"Model Name: {model_name}")
+        print(f"Model Type: {model_type}")
+        print(f"Device: {device}")
+        print("=============================\n")
     
         self.strategy = StrategyFactory.create_strategy(
             model_type=model_type,
             model_name=model_name,
             explainer_types=explainer_types,
             device=device,
-            max_length=max_length
+            max_length=max_length,
+            sampling_ratio=sampling_ratio,
+            token_shap_max_tokens=token_shap_max_tokens,
+            explanation_max_tokens=explanation_max_tokens,
         )
         # For tracking metrics
         self.metrics = {

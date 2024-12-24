@@ -4,46 +4,61 @@ from token_shap import StringSplitter, TokenSHAP
 from . import ProcessingStrategy
 from ..explainers import TokenSHAPModel
 from ..utils import save_decoder_outputs
+from ..templates import PromptTemplateFactory  # Add this import
+
 
 class DecoderStrategy(ProcessingStrategy):
     def __init__(self, 
                  model, 
                  tokenizer, 
-                 max_length: int = 256):
+                 max_length: int = 256,
+                 sampling_ratio: float = 0.0,
+                 token_shap_max_tokens: int = 32,
+                 explanation_max_tokens: int = 256):
         super().__init__(model, tokenizer, None)  # No explainer_types needed
         self.max_length = max_length
-        self.token_shap_wrapper = TokenSHAPModel(model, tokenizer, max_length)
+        self.explanation_max_tokens = explanation_max_tokens
+        self.token_shap_max_tokens = token_shap_max_tokens
+        self.sampling_ratio = sampling_ratio
+        self.token_shap_wrapper = TokenSHAPModel(
+            model, 
+            tokenizer, 
+            max_length,
+            max_new_tokens=token_shap_max_tokens)
+        
+        print(f"\n=== Strategy Configuration ===")
+        print(f"Explanation Max Tokens: {explanation_max_tokens}")
+        print(f"TokenSHAP Max Tokens: {token_shap_max_tokens}")
+        print(f"Sampling Ratio: {sampling_ratio}")
+        print("===========================\n")
+
+        # Get model name and setup template
+        model_name = model.config.name_or_path
+        self.template = PromptTemplateFactory.create_template(model_name)
+        print(f"\n=== Template Configuration ===")
+        print(f"Model Name: {model_name}")
+        print(f"Selected Template: {self.template.__class__.__name__}")
+        print(f"User Prefix: {repr(self.template.user_prefix)}")
+        print(f"User Suffix: {repr(self.template.user_suffix)}")
+        print(f"Assistant Prefix: {repr(self.template.assistant_prefix)}")
+        print("============================\n")
         
     def preprocess(self, case: Dict) -> Dict:
-        """Prepare prompts for both prediction and TokenSHAP"""
+        """Prepare prompts using model-specific template"""
         # Filter valid options
         options = {k: v for k, v in case['options'].items() if v is not None}
+
+        # Use template to format prompt
+        prediction_prompt = self.template.format_prompt(case)
         
-        # Base prompt structure that's common to both
-        base_prompt = (
-            "You are a medical expert analyzing this clinical case.\n\n"
-            "Clinical Case:\n"
-            f"{case['full_question']}\n\n"
-            "Options:\n"
-        )
-        for opt_num, opt_text in options.items():
-            base_prompt += f"{opt_num}: {opt_text}\n"
-
-        # For prediction 
-        prediction_prompt = base_prompt + (
-            "\nAnalyze this case and provide:\n"
-            "1. Your selected option (number only)\n"
-            "2. Medical reasoning behind your decision\n"
-            "Your Response: "
-        )
-
-        # For TokenSHAP, keep it focused on decision
-        token_shap_prompt = base_prompt + "\nSelect the most appropriate option (number only).\nYour Response: "
-
-
+        print("\n=== Prompt Preview ===")
+        print("First 200 characters of formatted prompt:")
+        print(prediction_prompt[:200] + "...")
+        print("=====================\n")
+        
         return {
             'prediction_prompt': prediction_prompt,
-            'token_shap_prompt': token_shap_prompt,
+            'token_shap_prompt': prediction_prompt,
             'options': options,
             'original': case
         }
@@ -62,7 +77,7 @@ class DecoderStrategy(ProcessingStrategy):
             with torch.no_grad():
                 outputs = self.model.generate(
                     **inputs,
-                    max_new_tokens=512,
+                    max_new_tokens=self.explanation_max_tokens,
                     pad_token_id=self.tokenizer.pad_token_id
                 )
             
@@ -83,15 +98,20 @@ class DecoderStrategy(ProcessingStrategy):
         try:
             splitter = StringSplitter()
             token_shap = TokenSHAP(self.token_shap_wrapper, splitter)
-            
+            print("Running TokenSHAP analysis...")
+            print(f"Using sampling ratio: {self.sampling_ratio}")
+            print(f"Max tokens: {self.token_shap_max_tokens}")
+        
             explanation = token_shap.analyze(
                 processed_case['token_shap_prompt'],
-                sampling_ratio=0.0, # if increased processing time will also increase 
+                sampling_ratio=self.sampling_ratio,  
                 print_highlight_text=True
             )
 
             print(f"\nTokenSHAP Analysis:")
             token_shap.print_colored_text()
+            print("TokenSHAP Analysis Complete")
+            print("=========================\n")
 
             save_path = save_decoder_outputs(
                 token_shap_exp=token_shap,

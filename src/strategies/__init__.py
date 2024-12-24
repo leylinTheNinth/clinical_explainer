@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from enum import Enum, auto
 from typing import Dict, List, Optional
 import torch
+import re
 from transformers import (
     AutoModelForMultipleChoice,
     AutoModelForCausalLM,
@@ -70,6 +71,9 @@ class StrategyFactory:
         explainer_types: Optional[List[str]] = None,
         device: str = "cuda" if torch.cuda.is_available() else "cpu",
         max_length: int = 256,
+        sampling_ratio: float = 0.0,  
+        token_shap_max_tokens: int = 32,  
+        explanation_max_tokens: int = 256,  
         **kwargs
     ) -> ProcessingStrategy:
         """
@@ -79,6 +83,8 @@ class StrategyFactory:
             model_type: Type of model (ENCODER/DECODER)
             model_name: HuggingFace model name/path
             device: Device to load model on
+            max_length = for tokenization
+            sampling ratio = for token shap (decoder)
             **kwargs: Additional args like quantize=True/False
             
         Returns:
@@ -109,7 +115,13 @@ class StrategyFactory:
                     ).to(device)
                     
                 tokenizer = AutoTokenizer.from_pretrained(model_name)
-                return DecoderStrategy(model, tokenizer, max_length=max_length)
+                return DecoderStrategy(
+                    model, 
+                    tokenizer, 
+                    max_length=max_length,
+                    sampling_ratio=sampling_ratio,
+                    token_shap_max_tokens=token_shap_max_tokens,
+                    explanation_max_tokens=explanation_max_tokens)
             
             elif model_type == ModelType.ENCODER:
                 # Load encoder (BERT-style) model
@@ -126,12 +138,14 @@ class StrategyFactory:
     @staticmethod
     def _should_quantize(model_name: str) -> bool:
         """Determine if model needs quantization based on size/type"""
-        # Models that typically need quantization
-        large_models = [
-            "mistralai/Mistral-7B-Instruct-v0.2",
-            "meta-llama/Llama-2-7b",
-            "mistralai/Mixtral-8x7B",
-        ]
-        
-        # Check if model is in large models list
-        return any(model_name.startswith(prefix) for prefix in large_models)
+        size_matches = re.findall(r'(\d+)[xX]?b', model_name, re.IGNORECASE)
+        for size_str in size_matches:
+            try:
+                size = int(size_str)
+                if size >= 7:
+                    return True
+            except ValueError:
+                # If conversion fails, skip this match
+                continue
+    
+        return False

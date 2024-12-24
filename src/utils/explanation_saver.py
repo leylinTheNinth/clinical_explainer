@@ -182,6 +182,7 @@ def save_decoder_outputs(token_shap_exp: Any,
     os.makedirs(case_dir, exist_ok=True)
     
     try:
+        print("Saving Token Shap values and case information...")
         essential_shap_data = {
             'shapley_values': token_shap_exp.shapley_values,
             'tokens': token_shap_exp.baseline_text  
@@ -200,7 +201,8 @@ def save_decoder_outputs(token_shap_exp: Any,
         info_path = os.path.join(case_dir, 'case_info.pkl')
         with open(info_path, 'wb') as f:
             pickle.dump(case_info, f)
-            
+
+        print(f"Successfully saved SHAP explanation for case {case_id}")
         return case_dir
         
     except Exception as e:

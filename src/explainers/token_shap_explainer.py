@@ -13,7 +13,8 @@ class TokenSHAPModel:
     def __init__(self, 
                  model: PreTrainedModel, 
                  tokenizer: PreTrainedTokenizer, 
-                 max_length: int = 256):
+                 max_length: int = 256,
+                 max_new_tokens: int = 32):
         """
         Initialize the TokenSHAP model wrapper.
         
@@ -25,6 +26,7 @@ class TokenSHAPModel:
         self.model = model
         self.tokenizer = tokenizer
         self.max_length = max_length
+        self.max_new_tokens = max_new_tokens
 
         # Ensure pad token is set
         if self.tokenizer.pad_token_id is None:
@@ -73,7 +75,7 @@ class TokenSHAPModel:
                 output_ids = self.model.generate(
                     input_ids=input_ids,
                     attention_mask=attention_mask,
-                    max_new_tokens=32,  # Could make this configurable
+                    max_new_tokens=self.max_new_tokens,  
                     pad_token_id=self.tokenizer.pad_token_id
                 )
 
