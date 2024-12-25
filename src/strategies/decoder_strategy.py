@@ -108,6 +108,8 @@ class DecoderStrategy(ProcessingStrategy):
                 print_highlight_text=True
             )
 
+            model_name = self.model.config.name_or_path
+
             print(f"\nTokenSHAP Analysis:")
             token_shap.print_colored_text()
             print("TokenSHAP Analysis Complete")
@@ -116,7 +118,8 @@ class DecoderStrategy(ProcessingStrategy):
             save_path = save_decoder_outputs(
                 token_shap_exp=token_shap,
                 case_info=prediction['original'],  # Using the original case info
-                prediction=prediction
+                prediction=prediction,
+                model_name=model_name
             )
         
             return {
