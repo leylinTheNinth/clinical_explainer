@@ -138,7 +138,8 @@ class ContextGroundedExplainer:
             # Clear GPU memory after each batch to prevent memory overflow
             torch.cuda.empty_cache()
         for i, (prompt, response) in enumerate(zip(prompts, responses)):
-            print(f"Prompt {i + 1}: {prompt}")
-            print(f"Response {i + 1}: {response}\n")
+            print("_________________________________________________________________________________________________")
+            print(f"Prompt {i + 1}: \n{prompt}")
+            print(f"Response {i + 1}: \n{response}\n")
 
         return responses

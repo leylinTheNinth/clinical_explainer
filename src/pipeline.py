@@ -82,7 +82,7 @@ class Pipeline:
                 if prediction['is_correct']:
                     self.metrics['correct_predictions'] += 1
 
-                context_grounded_reasoning = self.context_explainer.generate_response(case, explanations)
+                context_grounded_reasoning = self.context_explainer.generate_response(case, explanations, prediction)
                 yield {
                     'prediction': prediction,
                     'explanations': explanations,
