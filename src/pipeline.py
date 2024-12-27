@@ -2,6 +2,7 @@ from typing import Dict, Generator, Optional, List
 from datasets import load_dataset
 from .strategies import ModelType, StrategyFactory
 import torch
+from .context2nl import ContextGroundedExplainer
 
 class Pipeline:
     def __init__(self, 
@@ -47,6 +48,9 @@ class Pipeline:
             'correct_predictions': 0,
             'errors': []
         }
+        print("[DEBUG] Metrics initialized.")
+        self.context_explainer = ContextGroundedExplainer()
+        print("[DEBUG] Pipeline Initialized.")
         
     def process_dataset(self, split: str = 'validation', limit: int = None) -> Generator:
         """Process dataset with specified explainers
@@ -78,10 +82,12 @@ class Pipeline:
                 if prediction['is_correct']:
                     self.metrics['correct_predictions'] += 1
 
+                context_grounded_reasoning = self.context_explainer.generate_response(case, explanations)
                 yield {
                     'prediction': prediction,
                     'explanations': explanations,
-                    'original': case
+                    'original': case,
+                    'context_grounded_reasoning': context_grounded_reasoning
                 }
                 # Maybe periodic cleanup
                 if self.metrics['total_processed'] % 10 == 0:
