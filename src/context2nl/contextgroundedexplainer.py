@@ -4,6 +4,7 @@ from transformers import (
     AutoTokenizer, 
     BitsAndBytesConfig
 )
+from typing import Dict
 import os
 from ..templates import ContextExplainerPromptTemplateFactory
 from ..templates.context_explainer_base import TokenValuePairMethod
@@ -97,8 +98,9 @@ class ContextGroundedExplainer:
 
     def generate_response(
         self, 
-        case: dict, 
-        explanation: dict,
+        case: Dict, 
+        explanation: Dict,
+        prediction: Dict
     ) -> str:
         """
         Generate a response from the BioMistral model for a given case.
@@ -106,7 +108,7 @@ class ContextGroundedExplainer:
         print(f"[DEBUG] In generate response.\ncase:{case}\nexplanation:{explanation}")
         print(f"[DEBUG] Explantation type: {type(explanation)}")
         # Format the case into a prompt
-        prompts = self.template.generate_prompt(case, explanation, add_context = True, explanation_method=TokenValuePairMethod.TOKEN_VAL_PAIR)
+        prompts = self.template.generate_prompt(case, explanation, prediction, add_context = True, explanation_method=TokenValuePairMethod.TOKEN_VAL_PAIR)
         batch_size = 2
         responses = []
         for i in range(0, len(prompts), batch_size):

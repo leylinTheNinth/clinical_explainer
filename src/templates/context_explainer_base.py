@@ -51,7 +51,7 @@ class ContextExplainerPromptTemplate(PromptTemplate):
         elif method == TokenValuePairMethod.TOKEN_VAL_PAIR:
             # Method 2: Order the words by their importance and share token value pair in string
             ordered_list = sorted(word_importance_list, key=lambda x: x[1], reverse=True)
-            return "MODEL'S IMPORTANT TOKENS (with importance scores):" + "\n-".join(f"'{word}' : {value:.4f}" for word, value in ordered_list)
+            return "# MODEL'S TOKENS in Order of Importance (with importance scores):" + "\n-".join(f"'{word}' : {value:.4f}" for word, value in ordered_list)
         
         else:
             return ""
@@ -89,11 +89,11 @@ class ContextExplainerPromptTemplate(PromptTemplate):
     def format_context(self, case: Dict) -> str:
         options_text = self._format_options(case['options'])
         return (
-            f"{case['full_question']}\n\n"
-            f"AVAILABLE OPTIONS:\n{options_text}\n"
+            f"# QUESTION : \n{case['full_question']}\n\n"
+            f"# AVAILABLE OPTIONS : \n{options_text}\n"
         )
         
-    def generate_prompt(self, case: Dict, explanation: Dict, add_context: bool, explanation_method:TokenValuePairMethod= TokenValuePairMethod.IGNORE) -> str:
+    def generate_prompt(self, case: Dict, explanation: Dict, prediction:Dict, add_context: bool, explanation_method:TokenValuePairMethod= TokenValuePairMethod.IGNORE) -> str:
         """Format prompt with case, explanation, and context"""
         explanation_texts = self.format_explanations(explanation, explanation_method)  # Assuming you have a method for formatting explanation
     
@@ -102,10 +102,11 @@ class ContextExplainerPromptTemplate(PromptTemplate):
     
         return [
             (f" {self.user_prefix}\n"
-             f"You are a Medical Expert. Evaluate the answer given by a model that is trained for Explain why the correct answer selected is \n\nCLINICAL CASE:\n"
+             f"You are a Medical Expert. Evaluate the answer given by a model that is trained for answering medical question and answer. Explain why the correct answer selected is \n\nCLINICAL CASE:\n"
             f"{context_text}" 
+            f"CORRECT OPTION: {prediction['prediction']}"
             f"{explanation_text}\n"
-            f"Based on the case details and the model's token importance scores:"
+            f"Based on the question, predicted option and the model's token importance scores, explain the diagnosis"
             f"{self.user_suffix}"
             f"{self.assistant_prefix} ") for explanation_text in explanation_texts
         ]
