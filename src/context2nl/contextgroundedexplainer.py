@@ -6,7 +6,7 @@ from transformers import (
 )
 import os
 from ..templates import ContextExplainerPromptTemplateFactory
-from ..templates import TokenValuePairMethod
+from ..templates.context_explainer_base import TokenValuePairMethod
 
 class ContextGroundedExplainer:
     # def __init__(self):
