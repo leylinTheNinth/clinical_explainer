@@ -12,7 +12,7 @@ from .models import (
 
 class ContextExplainerPromptTemplateFactory(PromptTemplateFactory):
     @staticmethod
-    def create_template(model_name: str = ModelFamily.UNKNOWN) -> ContextExplainerPromptTemplate:
+    def create_template(model_name: str = "") -> ContextExplainerPromptTemplate:
         """Create appropriate template for model"""
         model_family = ContextExplainerPromptTemplateFactory.detect_model_family(model_name)
         

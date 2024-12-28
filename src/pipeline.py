@@ -13,7 +13,8 @@ class Pipeline:
                  sampling_ratio: float = 0.0,
                  max_length: int = 256,
                  token_shap_max_tokens: int = 32,
-                 explanation_max_tokens: int = 256,):
+                 explanation_max_tokens: int = 256
+                 ):
         """
         Initialize pipeline with specified model and explainers
         Args:
@@ -40,7 +41,7 @@ class Pipeline:
             max_length=max_length,
             sampling_ratio=sampling_ratio,
             token_shap_max_tokens=token_shap_max_tokens,
-            explanation_max_tokens=explanation_max_tokens,
+            explanation_max_tokens=explanation_max_tokens
         )
         # For tracking metrics
         self.metrics = {
@@ -48,11 +49,12 @@ class Pipeline:
             'correct_predictions': 0,
             'errors': []
         }
+        self.explanation_max_tokens=explanation_max_tokens
         print("[DEBUG] Metrics initialized.")
         self.context_explainer = ContextGroundedExplainer()
         print("[DEBUG] Pipeline Initialized.")
         
-    def process_dataset(self, split: str = 'validation', limit: int = None) -> Generator:
+    def process_dataset(self, split: str = 'validation', limit: int = None, generate_natural_language_explanation = False, explainer_model_type:str = "mixtral-8x7b-32768", explanation_max_tokens=None) -> Generator:
         """Process dataset with specified explainers
         
         Args:
@@ -82,13 +84,22 @@ class Pipeline:
                 if prediction['is_correct']:
                     self.metrics['correct_predictions'] += 1
 
-                context_grounded_reasoning = self.context_explainer.generate_response(case, explanations, prediction)
-                yield {
-                    'prediction': prediction,
-                    'explanations': explanations,
-                    'original': case,
-                    'context_grounded_reasoning': context_grounded_reasoning
-                }
+                if generate_natural_language_explanation:
+                    if explanation_max_tokens == None:
+                        explanation_max_tokens = self.explanation_max_tokens
+                    context_grounded_reasoning = self.context_explainer.generate_response(case, explanations, prediction, explainer_model_type, explanation_max_tokens)
+                    yield {
+                        'prediction': prediction,
+                        'explanations': explanations,
+                        'original': case,
+                        'context_grounded_reasoning': context_grounded_reasoning
+                    }
+                else:
+                    yield {
+                        'prediction': prediction,
+                        'explanations': explanations,
+                        'original': case
+                    }
                 # Maybe periodic cleanup
                 if self.metrics['total_processed'] % 10 == 0:
                     torch.cuda.empty_cache()

@@ -24,7 +24,8 @@ class ContextGroundedExplainer:
         case: Dict, 
         explanation: Dict,
         prediction: Dict,
-        model : str = "mixtral-8x7b-32768"
+        model : str = "mixtral-8x7b-32768",
+        explanation_max_tokens = 512
     ) -> str:
         prompts = self.template.generate_prompt(case, explanation, prediction, add_context = True, explanation_method=TokenValuePairMethod.TOKEN_VAL_PAIR)
         responses = []
@@ -38,7 +39,7 @@ class ContextGroundedExplainer:
                     },
                 ],
                 temperature=1,
-                max_tokens= 200,
+                max_tokens= explanation_max_tokens,
                 top_p=1,
                 stream=False,
                 stop=None,
