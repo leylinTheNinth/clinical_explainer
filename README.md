@@ -35,6 +35,7 @@ pip install datasets transformers torch lime
 from clinical_explainer.src.pipeline import Pipeline
 from clinical_explainer.src.explainers import ExplainerType
 
+os.environ["GROQ_API_KEY"] = <GROQ_API_KEY> # visit https://console.groq.com/ for more information
 # Initialize pipeline with LIME explainer
 pipeline = Pipeline(
     model_name="RUI525/PubMedBERT-finetune-MedMCQA-w-context",
