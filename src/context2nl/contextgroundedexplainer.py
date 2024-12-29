@@ -27,9 +27,13 @@ class ContextGroundedExplainer:
         model : str = "mixtral-8x7b-32768",
         explanation_max_tokens = 512
     ) -> str:
-        prompts = self.template.generate_prompt(case, explanation, prediction, add_context = True, explanation_method=TokenValuePairMethod.TOKEN_VAL_PAIR)
+        print("[DEBUG] Generating prompts with provided case, explanation, and prediction.")
+        prompts = self.template.generate_prompt(case, explanation, prediction, add_context=True, explanation_method=TokenValuePairMethod.TOKEN_VAL_PAIR)
+        print(f"[DEBUG] Prompts generated: {prompts}")
+
         responses = {}
         for model, prompt in prompts.items():
+            print(f"[DEBUG] Generating response for model: {model} with prompt: {prompt}")
             completion = self.client.chat.completions.create(
                 model=model,
                 messages=[
@@ -39,12 +43,13 @@ class ContextGroundedExplainer:
                     },
                 ],
                 temperature=1,
-                max_tokens= explanation_max_tokens,
+                max_tokens=explanation_max_tokens,
                 top_p=1,
                 stream=False,
                 stop=None,
             )
-
+            print(f"[DEBUG] Response received for model {model}: {completion.choices[0].message.content}")
             responses[model] = completion.choices[0].message.content
 
+        print(f"[DEBUG] Final responses: {responses}")
         return responses
