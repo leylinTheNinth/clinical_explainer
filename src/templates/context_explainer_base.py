@@ -80,7 +80,7 @@ class ContextExplainerPromptTemplate(PromptTemplate):
                     print(f"[DEBUG] Formatting explanation for label: {label}")
                     ret_val += self.token_value_pair_to_string(lime_exp.as_list(label= label), explanation_method) + ""
                     # ret_val += "\nPredicted Probabilities for each option:" + str(lime_exp.predict_proba)
-                all_explanations["key"] = ret_val
+                all_explanations[key] = ret_val
                 print(f"[DEBUG] Formatted explanation for key 'lime': {ret_val}")
                 
             if key == "shap":
@@ -89,7 +89,7 @@ class ContextExplainerPromptTemplate(PromptTemplate):
                 word_value_pairs = [(word, shap_value) for word, shap_value in zip(shap_exp.data[0], shap_exp.values[0])]
                 print(f"[DEBUG] Formatting SHAP explanation with word-value pairs: {word_value_pairs}")
                 ret_val += self.token_value_pair_to_string(word_value_pairs, explanation_method) +"\n"
-                all_explanations["key"] = ret_val
+                all_explanations[key] = ret_val
                 print(f"[DEBUG] Formatted explanation for key 'shap': {ret_val}")
 
             if key == "shapley_values":
@@ -100,7 +100,7 @@ class ContextExplainerPromptTemplate(PromptTemplate):
                     word_value_pairs.append((parts[0], value))
                 print(f"[DEBUG] Formatting Shapley values explanation with word-value pairs: {word_value_pairs}")
                 ret_val += self.token_value_pair_to_string(word_value_pairs, explanation_method) +"\n"
-                all_explanations["key"] = ret_val
+                all_explanations[key] = ret_val
                 print(f"[DEBUG] Formatted explanation for key 'shapley_values': {ret_val}")
 
         return all_explanations
@@ -119,7 +119,7 @@ class ContextExplainerPromptTemplate(PromptTemplate):
         """Format prompt with case, explanation, and context"""
         print("[DEBUG] Generating prompt with case, explanation, and prediction.")
         explanation_texts = self.format_explanations(explanation, explanation_method)  # Assuming you have a method for formatting explanation
-        print(f"[DEBUG] Formatted explanations: {explanation_texts}")
+        print(f"[DEBUG] Formatted explanations: {explanation_texts}") # here key is returning the value
     
         # Use add_context to decide whether to include the context
         context_text = self.format_context(case) if add_context else ""

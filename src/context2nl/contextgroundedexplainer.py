@@ -33,8 +33,8 @@ class ContextGroundedExplainer:
         print(f"[DEBUG] Prompts generated: {prompts}")
 
         responses = {}
-        for model, prompt in prompts.items():
-            print(f"[DEBUG] Generating response for model: {model} with prompt: {prompt}")
+        for explanation_type, prompt in prompts.items():
+            print(f"[DEBUG] Generating response for model: ({model}, {explanation_type}) with prompt: {prompt}")
             completion = self.client.chat.completions.create(
                 model=model,
                 messages=[
@@ -49,8 +49,8 @@ class ContextGroundedExplainer:
                 stream=False,
                 stop=None,
             )
-            print(f"[DEBUG] Response received for model {model}: {completion.choices[0].message.content}")
-            responses[model] = completion.choices[0].message.content
+            print(f"[DEBUG] Response received for model ({model},{explanation_type}): {completion.choices[0].message.content}")
+            responses[explanation_type] = completion.choices[0].message.content
 
         print(f"[DEBUG] Final responses: {responses}")
         return responses
