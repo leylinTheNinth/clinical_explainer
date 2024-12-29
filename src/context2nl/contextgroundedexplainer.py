@@ -16,7 +16,8 @@ class ContextGroundedExplainer:
             api_key=os.environ.get("GROQ_API_KEY"),
         )
         self.template = ContextExplainerPromptTemplateFactory.create_template() #Creates a template of default class
-        print("Context Grounded Explainer Initialized successfully")
+        print("Context Grounded Explainer Initialized successfully: ", self.template)
+        print("Client successfully set up: ",self.client)
 
 
     def generate_response(
