@@ -18,11 +18,15 @@ class Pipeline:
         """
         Initialize pipeline with specified model and explainers
         Args:
-            model_name: HuggingFace model name/path
-            model_type: Type of model (ENCODER/DECODER)
-            explainer_types: List of explainer types to use ('lime', 'shap', 'TokenShap', etc.)
-            sampling_ratio: Sampling ratio for TokenSHAP (decoder only)
-            max_length: Maximum sequence length (decoder only)
+            model_name (str): HuggingFace model name or path.
+            model_type (ModelType): Type of model (ENCODER/DECODER).
+            explainer_types (Optional[List[str]]): List of explainer types to use ('lime', 'shap', 'TokenShap', etc.).
+            device (str, optional): Device to run the model on ('cpu' or 'cuda'). Defaults to None, which auto-selects based on availability.
+            sampling_ratio (float, optional): Sampling ratio for TokenSHAP (applicable for decoder only). Defaults to 0.0.
+            max_length (int, optional): Maximum sequence length (applicable for decoder only). Defaults to 256.
+            token_shap_max_tokens (int, optional): Maximum number of tokens for TokenSHAP. Defaults to 32.
+            explanation_max_tokens (int, optional): Maximum number of tokens for explanations. Defaults to 256.
+
         """
         if device is None:
             device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -55,11 +59,18 @@ class Pipeline:
         print("[DEBUG] Pipeline Initialized.")
         
     def process_dataset(self, split: str = 'validation', limit: int = None, generate_natural_language_explanation = False, explainer_model_type:str = "mixtral-8x7b-32768", explanation_max_tokens=None) -> Generator:
-        """Process dataset with specified explainers
-        
+        """
+        Process the dataset with the specified explainers.
+
         Args:
-            split: 'train', 'validation', or 'test'
-            limit: number of cases to process
+            split (str): The dataset split to process ('train', 'validation', or 'test'). Defaults to 'validation'.
+            limit (int, optional): The number of cases to process. If None, process all cases. Defaults to None.
+            generate_natural_language_explanation (bool, optional): Whether to generate natural language explanations. Defaults to False.
+            explainer_model_type (str, optional): The type of explainer model to use available from groq. Defaults to "mixtral-8x7b-32768".
+            explanation_max_tokens (int, optional): The maximum number of tokens for explanations for the context grounded explanation step.
+
+        Yields:
+            Generator: A generator that yields processed cases.
         """
         dataset = load_dataset("HiTZ/casimedicos-exp", "en")[split]
         
@@ -70,7 +81,7 @@ class Pipeline:
             print(f"Processing {len(dataset)} cases...")
 
         for case in dataset:
-            try:
+            # try:
                 print("\n" + "="*80)
                 print(f"📋 Case ID: {case.get('id', 'unknown')}")
                 print(f"Type: {case['type']}")
@@ -104,9 +115,9 @@ class Pipeline:
                 if self.metrics['total_processed'] % 10 == 0:
                     torch.cuda.empty_cache()
 
-            except Exception as e:
-                self.metrics['errors'].append(str(e))
-                yield {'error': str(e), 'original': case}
+            # except Exception as e:
+            #     self.metrics['errors'].append(str(e))
+            #     yield {'error': str(e), 'original': case}
 
         # Print final metrics
         print(f"\nProcessing complete!")
