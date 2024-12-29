@@ -59,7 +59,7 @@ class ContextExplainerPromptTemplate(PromptTemplate):
 
     
     def format_explanations(self, explanation: Dict, explanation_method:TokenValuePairMethod = TokenValuePairMethod.IGNORE):
-        all_explanations = []
+        all_explanations = {}
         for key, values in explanation.items():
             if key == "lime":
                 lime_exp = explanation["lime"]["exp"]
@@ -67,14 +67,14 @@ class ContextExplainerPromptTemplate(PromptTemplate):
                 for label in lime_exp.available_labels():
                     ret_val += self.token_value_pair_to_string(lime_exp.as_list(label= label), explanation_method) + ""
                     # ret_val += "\nPredicted Probabilities for each option:" + str(lime_exp.predict_proba)
-                all_explanations.append(ret_val)
+                all_explanations["key"] = ret_val
                 
             if key == "shap":
                 shap_exp = explanation["shap"]["exp"]
                 ret_val = ""
                 word_values_pairs = [(word, shap_value) for word, shap_value in zip(shap_exp.data[0], shap_exp.values[0])]
                 ret_val += self.token_value_pair_to_string(word_values_pairs, explanation_method) +"\n"
-                all_explanations.append(ret_val)
+                all_explanations["key"] = ret_val
 
             if key == "shapley_values":
                 token_shap = explanation["shapley_values"]
@@ -83,7 +83,8 @@ class ContextExplainerPromptTemplate(PromptTemplate):
                     parts = key.rsplit("_", 1)
                     word_value_pairs.append((parts[0], value))
                 ret_val += self.token_value_pair_to_string(word_values_pairs, explanation_method) +"\n"
-                all_explanations.append(ret_val)
+                all_explanations["key"] = ret_val
+
         return all_explanations
             
     def format_context(self, case: Dict) -> str:
@@ -93,20 +94,19 @@ class ContextExplainerPromptTemplate(PromptTemplate):
             f"# AVAILABLE OPTIONS : \n{options_text}\n"
         )
         
-    def generate_prompt(self, case: Dict, explanation: Dict, prediction:Dict, add_context: bool, explanation_method:TokenValuePairMethod= TokenValuePairMethod.IGNORE) -> str:
+    def generate_prompt(self, case: Dict, explanation: Dict, prediction:Dict, add_context: bool, explanation_method:TokenValuePairMethod= TokenValuePairMethod.IGNORE) -> Dict:
         """Format prompt with case, explanation, and context"""
         explanation_texts = self.format_explanations(explanation, explanation_method)  # Assuming you have a method for formatting explanation
     
         # Use add_context to decide whether to include the context
         context_text = self.format_context(case) if add_context else ""
-    
-        return [
-            (f" {self.user_prefix}\n"
-             f"You are a Medical Expert. Evaluate the answer given by a model that is trained for answering medical question and answer. Explain why the correct answer selected is \n\nCLINICAL CASE:\n"
+        ret_val ={}
+        for model, explanation_text in self.format_explanations(explanation, explanation_method).items():
+            ret_val[model] = (f" {self.user_prefix}\n"
+             f"You are a Medical Expert. Evaluate the answer given by a model that is trained for answering medical question and answer. Explain why the correct answer is selected. \n\nCLINICAL CASE:\n"
             f"{context_text}" 
             f"CORRECT OPTION: {prediction['prediction']}"
             f"{explanation_text}\n"
-            f"Based on the question, predicted option and the model's token importance scores, explain the diagnosis"
+            f"Based on the question, predicted option and the model's token importance scores, explain the diagnosis.\n"
             f"{self.user_suffix}"
-            f"{self.assistant_prefix} ") for explanation_text in explanation_texts
-        ]
+            f"{self.assistant_prefix} ")

@@ -28,8 +28,8 @@ class ContextGroundedExplainer:
         explanation_max_tokens = 512
     ) -> str:
         prompts = self.template.generate_prompt(case, explanation, prediction, add_context = True, explanation_method=TokenValuePairMethod.TOKEN_VAL_PAIR)
-        responses = []
-        for prompt in prompts:
+        responses = {}
+        for model, prompt in prompts.items():
             completion = self.client.chat.completions.create(
                 model=model,
                 messages=[
@@ -45,7 +45,7 @@ class ContextGroundedExplainer:
                 stop=None,
             )
 
-            responses.append(completion.choices[0].message.content)
+            responses[model] = completion.choices[0].message.content
 
         return responses
 
