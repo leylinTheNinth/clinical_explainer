@@ -77,20 +77,20 @@ class ContextExplainerPromptTemplate(PromptTemplate):
                 lime_exp = explanation["lime"]["exp"]
                 ret_val = ""
                 for label in lime_exp.available_labels():
-                    print(f"[DEBUG] Formatting explanation for label: {label}")
+                    # print(f"[DEBUG] Formatting explanation for label: {label}")
                     ret_val += self.token_value_pair_to_string(lime_exp.as_list(label= label), explanation_method) + ""
                     # ret_val += "\nPredicted Probabilities for each option:" + str(lime_exp.predict_proba)
                 all_explanations[key] = ret_val
-                print(f"[DEBUG] Formatted explanation for key 'lime': {ret_val}")
+                # print(f"[DEBUG] Formatted explanation for key 'lime': {ret_val}")
                 
             if key == "shap":
                 shap_exp = explanation["shap"]["exp"]
                 ret_val = ""
                 word_value_pairs = [(word, shap_value) for word, shap_value in zip(shap_exp.data[0], shap_exp.values[0])]
-                print(f"[DEBUG] Formatting SHAP explanation with word-value pairs: {word_value_pairs}")
+                # print(f"[DEBUG] Formatting SHAP explanation with word-value pairs: {word_value_pairs}")
                 ret_val += self.token_value_pair_to_string(word_value_pairs, explanation_method) +"\n"
                 all_explanations[key] = ret_val
-                print(f"[DEBUG] Formatted explanation for key 'shap': {ret_val}")
+                # print(f"[DEBUG] Formatted explanation for key 'shap': {ret_val}")
 
             if key == "shapley_values":
                 token_shap = explanation["shapley_values"]
@@ -98,10 +98,10 @@ class ContextExplainerPromptTemplate(PromptTemplate):
                 for key, value in token_shap.items():
                     parts = key.rsplit("_", 1)
                     word_value_pairs.append((parts[0], value))
-                print(f"[DEBUG] Formatting Shapley values explanation with word-value pairs: {word_value_pairs}")
+                # print(f"[DEBUG] Formatting Shapley values explanation with word-value pairs: {word_value_pairs}")
                 ret_val += self.token_value_pair_to_string(word_value_pairs, explanation_method) +"\n"
                 all_explanations[key] = ret_val
-                print(f"[DEBUG] Formatted explanation for key 'shapley_values': {ret_val}")
+        print(f"[DEBUG] Formatted explanation for all_explanations in format_explanations: {all_explanations}")
 
         return all_explanations
             
@@ -117,7 +117,7 @@ class ContextExplainerPromptTemplate(PromptTemplate):
         
     def generate_prompt(self, case: Dict, explanation: Dict, prediction:Dict, add_context: bool, explanation_method:TokenValuePairMethod= TokenValuePairMethod.IGNORE) -> Dict:
         """Format prompt with case, explanation, and context"""
-        print("[DEBUG] Generating prompt with case, explanation, and prediction.")
+        print("[DEBUG][generate_prompt] Prompt with case, explanation, and prediction.")
         explanation_texts = self.format_explanations(explanation, explanation_method)  # Assuming you have a method for formatting explanation
         print(f"[DEBUG] Formatted explanations: {explanation_texts}") # here key is returning the value
     
@@ -135,5 +135,6 @@ class ContextExplainerPromptTemplate(PromptTemplate):
             f"Based on the question, predicted option and the model's token importance scores, explain the diagnosis.\n"
             f"{self.user_suffix}"
             f"{self.assistant_prefix} ")
-            print(f"[DEBUG] Generated prompt for model {model}: {ret_val[model]}")
+            print(f"[DEBUG] Generated prompt for explainer {model}: {ret_val[model]}")
+            print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
         return ret_val
