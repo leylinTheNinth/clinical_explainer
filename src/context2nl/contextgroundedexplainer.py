@@ -30,12 +30,13 @@ class ContextGroundedExplainer:
     ) -> str:
         print("[DEBUG] Generating prompts with provided case, explanation, and prediction.")
         prompts = self.template.generate_prompt(case, explanation, prediction, add_context=True, explanation_method=TokenValuePairMethod.TOKEN_VAL_PAIR)
-        print(f"[DEBUG] Prompts for which explainers generated: {prompts.keys()}")
+        # print(f"[DEBUG] Prompts for which explainers generated: {prompts.keys()}")
 
         responses = {}
-        print("________________________________________________________________________________________________________________")
+        # print("________________________________________________________________________________________________________________")
         for explanation_type, prompt in prompts.items():
-            print(f"[DEBUG] Generating response for model: ({model}, {explanation_type}) with prompt: {prompt}")
+            # print(f"[DEBUG] Generating response for model: ({model}, {explanation_type}) with prompt: {prompt}")
+            print(f"[DEBUG] Generating response for model: ({model}, {explanation_type})")
             completion = self.client.chat.completions.create(
                 model=model,
                 messages=[
@@ -50,8 +51,8 @@ class ContextGroundedExplainer:
                 stream=False,
                 stop=None,
             )
-            print(f"[DEBUG] Response received for model ({model},{explanation_type}): {completion.choices[0].message.content}")
+            # print(f"[DEBUG] Response received for model ({model},{explanation_type}): {completion.choices[0].message.content}")
             responses[explanation_type] = completion.choices[0].message.content
 
-        print(f"[DEBUG] Final responses: {responses}")
+        # print(f"[DEBUG] Final responses: {responses}")
         return responses
