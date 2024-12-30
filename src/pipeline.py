@@ -54,7 +54,7 @@ class Pipeline:
             'errors': []
         }
         self.explanation_max_tokens=explanation_max_tokens
-        print("[DEBUG] Metrics initialized.")
+        # print("[DEBUG] Metrics initialized.")
         self.context_explainer = ContextGroundedExplainer()
         print("[DEBUG] Pipeline Initialized.")
         
