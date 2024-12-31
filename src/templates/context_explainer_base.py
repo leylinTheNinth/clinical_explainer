@@ -136,5 +136,5 @@ class ContextExplainerPromptTemplate(PromptTemplate):
             custom_prompt = self.default_prompt
         for model, explanation_text in self.format_explanations(explanation, explanation_method).items():
                 ret_val[model] = custom_prompt(self.user_prefix, context_text, prediction['prediction'], explanation_text, self.user_suffix, self.assistant_prefix)
-        print(f"[DEBUG] Example of generated prompts for all models: {ret_val[list(ret_val.keys())[0]]}")
+        print(f"[DEBUG] Example of generated prompts for all models: {ret_val}")
         return ret_val
