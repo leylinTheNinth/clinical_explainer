@@ -94,7 +94,7 @@ class ContextExplainerPromptTemplate(PromptTemplate):
 
             if key == "token_shap":
                 print("[DEBUG] HERE I AM IN SHAPLEY VALUES")
-                token_shap = explanation["shapley_values"]
+                token_shap = explanation["token_shap"]["shapley_values"]
                 word_value_pairs = []
                 ret_val = ""
                 print("[DEBUG] Entering for loop")
