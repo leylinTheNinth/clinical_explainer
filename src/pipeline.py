@@ -3,7 +3,6 @@ from datasets import load_dataset
 from .strategies import ModelType, StrategyFactory
 import torch
 from .context2nl import ContextGroundedExplainer
-import traceback
 class Pipeline:
     def __init__(self, 
                  model_name: str, 
@@ -81,7 +80,7 @@ class Pipeline:
             print(f"Processing {len(dataset)} cases...")
 
         for case in dataset:
-            try:
+            #try:
                 print("\n" + "="*80)
                 print(f"📋 Case ID: {case.get('id', 'unknown')}")
                 print(f"Type: {case['type']}")
@@ -115,11 +114,9 @@ class Pipeline:
                 if self.metrics['total_processed'] % 10 == 0:
                     torch.cuda.empty_cache()
 
-            except Exception as e:
-                error_details = traceback.format_exc()
-                self.metrics['errors'].append(str(e))
-                self.metrics['errors'].append(error_details)
-                yield {'error': str(e), 'original': case}
+            #except Exception as e:
+            #    self.metrics['errors'].append(str(e))
+            #    yield {'error': str(e), 'original': case}
 
         # Print final metrics
         print(f"\nProcessing complete!")
