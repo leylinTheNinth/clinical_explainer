@@ -3,7 +3,7 @@ from datasets import load_dataset
 from .strategies import ModelType, StrategyFactory
 import torch
 from .context2nl import ContextGroundedExplainer
-
+import traceback
 class Pipeline:
     def __init__(self, 
                  model_name: str, 
@@ -116,7 +116,9 @@ class Pipeline:
                     torch.cuda.empty_cache()
 
             except Exception as e:
+                error_details = traceback.format_exc()
                 self.metrics['errors'].append(str(e))
+                self.metrics['errors'].append(error_details)
                 yield {'error': str(e), 'original': case}
 
         # Print final metrics
