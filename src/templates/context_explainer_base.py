@@ -98,10 +98,10 @@ class ContextExplainerPromptTemplate(PromptTemplate):
                 word_value_pairs = []
                 ret_val = ""
                 print("[DEBUG] Entering for loop")
-                for key, value in token_shap.items():
-                    parts = key.rsplit("_", 1)
+                for key_token_shap, value_token_shap in token_shap.items():
+                    parts = key_token_shap.rsplit("_", 1)
                     print("[DEBUG] Parts: ", parts)
-                    word_value_pairs.append((parts[0], value))
+                    word_value_pairs.append((parts[0], value_token_shap))
                 print(f"[DEBUG] Formatting Shapley values explanation with word-value pairs: {word_value_pairs}")
                 ret_val += self.token_value_pair_to_string(word_value_pairs, explanation_method) +"\n"
                 all_explanations[key] = ret_val
@@ -142,7 +142,10 @@ class ContextExplainerPromptTemplate(PromptTemplate):
         print(f"[DEBUG] EXP Values: {explanation.keys()}")
         for model, explanation_text in all_explanations.items():
                 print("[DEBUG] Generating prompt for model:", model)
-                ret_val[model] = custom_prompt(self.user_prefix, context_text, prediction['prediction'], explanation_text, self.user_suffix, self.assistant_prefix)
+                if model == "lime" or model == "shap":
+                    ret_val[model] = custom_prompt(self.user_prefix, context_text, prediction['prediction'], explanation_text, self.user_suffix, self.assistant_prefix)
+                if model == "token_shap":
+                    ret_val[model] = custom_prompt(self.user_prefix, context_text, prediction['response'], explanation_text, self.user_suffix, self.assistant_prefix)
                 print("[DEBUG] Generated prompt for model:", model)
         # print(f"_________________________________DEBUG STATEMENT: {model}_______________________________________________________")
         print(f"[DEBUG] Example of generated prompts for all models: {ret_val}")
