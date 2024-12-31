@@ -98,10 +98,10 @@ class ContextExplainerPromptTemplate(PromptTemplate):
                 for key, value in token_shap.items():
                     parts = key.rsplit("_", 1)
                     word_value_pairs.append((parts[0], value))
-                # print(f"[DEBUG] Formatting Shapley values explanation with word-value pairs: {word_value_pairs}")
+                print(f"[DEBUG] Formatting Shapley values explanation with word-value pairs: {word_value_pairs}")
                 ret_val += self.token_value_pair_to_string(word_value_pairs, explanation_method) +"\n"
                 all_explanations[key] = ret_val
-        # print(f"[DEBUG] Formatted explanation keys for all_explanations in format_explanations: {all_explanations.keys()}")
+        print(f"[DEBUG] Formatted explanation keys for all_explanations in format_explanations: {all_explanations.keys()}")
         return all_explanations
             
     def format_context(self, case: Dict) -> str:
@@ -115,7 +115,7 @@ class ContextExplainerPromptTemplate(PromptTemplate):
         return formatted_context
     
     def default_prompt(self, user_prefix, context_text, prediction, explanation_text, user_suffix, assistant_prefix)->str:
-        # print("Using Default Prompt")
+        print("Using Default Prompt")
         return (f" {user_prefix}\n"
                 f"You are a Medical Expert. Evaluate the answer given by a model that is trained for answering medical question and answer. Explain why the correct answer is selected. \n\nCLINICAL CASE:\n"
                 f"{context_text}" 
@@ -134,12 +134,12 @@ class ContextExplainerPromptTemplate(PromptTemplate):
         if not custom_prompt:
             custom_prompt = self.default_prompt
         all_explanations = self.format_explanations(explanation, explanation_method)
-        # print(f"[DEBUG] Explanation keys for all_explanations in generate_prompt: {all_explanations.keys()}")
-        # print(f"[DEBUG] EXP Values: {explanation.keys()}")
+        print(f"[DEBUG] Explanation keys for all_explanations in generate_prompt: {all_explanations.keys()}")
+        print(f"[DEBUG] EXP Values: {explanation.keys()}")
         for model, explanation_text in all_explanations.items():
-                # print("[DEBUG] Generating prompt for model:", model)
+                print("[DEBUG] Generating prompt for model:", model)
                 ret_val[model] = custom_prompt(self.user_prefix, context_text, prediction['prediction'], explanation_text, self.user_suffix, self.assistant_prefix)
-                # print("[DEBUG] Generated prompt for model:", model)
-        # print(f"_________________________________DEBUG STATEMENT: {model}_______________________________________________________")
-        # print(f"[DEBUG] Example of generated prompts for all models: {ret_val}")
+                print("[DEBUG] Generated prompt for model:", model)
+        print(f"_________________________________DEBUG STATEMENT: {model}_______________________________________________________")
+        print(f"[DEBUG] Example of generated prompts for all models: {ret_val}")
         return ret_val
