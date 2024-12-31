@@ -69,10 +69,10 @@ class ContextExplainerPromptTemplate(PromptTemplate):
 
     
     def format_explanations(self, explanation: Dict, explanation_method:TokenValuePairMethod = TokenValuePairMethod.IGNORE):
-        # print("[DEBUG] Formatting explanations with method:", explanation_method)
+        print("[DEBUG] Formatting explanations with method:", explanation_method)
         all_explanations = {}
         for key, values in explanation.items():
-            # print(f"[DEBUG] Processing explanation for key: {key}")
+            print(f"[DEBUG] Processing explanation for key: {key}")
             if key == "lime":
                 lime_exp = explanation["lime"]["exp"]
                 ret_val = ""
@@ -116,6 +116,7 @@ class ContextExplainerPromptTemplate(PromptTemplate):
         return formatted_context
     
     def default_prompt(self, user_prefix, context_text, prediction, explanation_text, user_suffix, assistant_prefix)->str:
+        print("Using Default Prompt")
         return (f" {user_prefix}\n"
                 f"You are a Medical Expert. Evaluate the answer given by a model that is trained for answering medical question and answer. Explain why the correct answer is selected. \n\nCLINICAL CASE:\n"
                 f"{context_text}" 
@@ -135,5 +136,5 @@ class ContextExplainerPromptTemplate(PromptTemplate):
             custom_prompt = self.default_prompt
         for model, explanation_text in self.format_explanations(explanation, explanation_method).items():
                 ret_val[model] = custom_prompt(self.user_prefix, context_text, prediction['prediction'], explanation_text, self.user_suffix, self.assistant_prefix)
-        print(f"[DEBUG] Example of generated prompts for all models: {ret_val[ret_val.keys()[0]]}")
+        print(f"[DEBUG] Example of generated prompts for all models: {ret_val[list(ret_val.keys())[0]]}")
         return ret_val
