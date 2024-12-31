@@ -131,7 +131,8 @@ class ContextExplainerPromptTemplate(PromptTemplate):
         context_text = self.format_context(case) if add_context else ""
         # print(f"[DEBUG] Context text: {context_text}")
         ret_val ={}
-        if not custom_prompt:
+        if custom_prompt == None:
+            print("[DEBUG] Using default prompt")
             custom_prompt = self.default_prompt
         all_explanations = self.format_explanations(explanation, explanation_method)
         # print(f"[DEBUG] Explanation keys for all_explanations in generate_prompt: {all_explanations.keys()}")
