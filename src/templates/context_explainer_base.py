@@ -1,6 +1,6 @@
 from .base import PromptTemplate
 from typing import Dict
-import numpy as np
+import os
 
 from enum import Enum
 from typing import List, Tuple
@@ -114,27 +114,26 @@ class ContextExplainerPromptTemplate(PromptTemplate):
         )
         # print(f"[DEBUG] Formatted context: {formatted_context}")
         return formatted_context
+    
+    def default_prompt(self, user_prefix, context_text, prediction, explanation_text, user_suffix, assistant_prefix)->str:
+        return (f" {user_prefix}\n"
+                f"You are a Medical Expert. Evaluate the answer given by a model that is trained for answering medical question and answer. Explain why the correct answer is selected. \n\nCLINICAL CASE:\n"
+                f"{context_text}" 
+                f"CORRECT OPTION: {prediction}"
+                f"{explanation_text}\n"
+                f"Based on the question, predicted option and the model's token importance scores, explain the diagnosis.\n"
+                f"{user_suffix}"
+                f"{assistant_prefix}")
         
-    def generate_prompt(self, case: Dict, explanation: Dict, prediction:Dict, add_context: bool, explanation_method:TokenValuePairMethod= TokenValuePairMethod.IGNORE) -> Dict:
+    def generate_prompt(self, case: Dict, explanation: Dict, prediction:Dict, add_context: bool, custom_prompt = None, explanation_method:TokenValuePairMethod= TokenValuePairMethod.IGNORE) -> Dict:
         """Format prompt with case, explanation, and context"""
         print("[DEBUG][generate_prompt] Prompt generation with case, explanation, and prediction.")
-        explanation_texts = self.format_explanations(explanation, explanation_method)  # Assuming you have a method for formatting explanation
-        # print(f"[DEBUG] Formatted explanations: {explanation_texts}")
-    
-        # Use add_context to decide whether to include the context
         context_text = self.format_context(case) if add_context else ""
         # print(f"[DEBUG] Context text: {context_text}")
         ret_val ={}
+        if not custom_prompt:
+            custom_prompt = self.default_prompt
         for model, explanation_text in self.format_explanations(explanation, explanation_method).items():
-            # print(f"[DEBUG] Generating prompt for model: {model}")
-            ret_val[model] = (f" {self.user_prefix}\n"
-             f"You are a Medical Expert. Evaluate the answer given by a model that is trained for answering medical question and answer. Explain why the correct answer is selected. \n\nCLINICAL CASE:\n"
-            f"{context_text}" 
-            f"CORRECT OPTION: {prediction['prediction']}"
-            f"{explanation_text}\n"
-            f"Based on the question, predicted option and the model's token importance scores, explain the diagnosis.\n"
-            f"{self.user_suffix}"
-            f"{self.assistant_prefix} ")
-            # print(f"[DEBUG] Generated prompt for explainer {model}: {ret_val[model]}")
-            # print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                ret_val[model] = custom_prompt(self.user_prefix, context_text, prediction['prediction'], explanation_text, self.user_suffix, self.assistant_prefix)
+        print(f"[DEBUG] Example of generated prompts for all models: {ret_val[ret_val.keys()[0]]}")
         return ret_val

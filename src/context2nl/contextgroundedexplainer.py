@@ -26,10 +26,11 @@ class ContextGroundedExplainer:
         explanation: Dict,
         prediction: Dict,
         model : str = "mixtral-8x7b-32768",
-        explanation_max_tokens = 512
+        explanation_max_tokens = 512,
+        custom_prompt = None
     ) -> str:
         print("[DEBUG] Generating prompts with provided case, explanation, and prediction.")
-        prompts = self.template.generate_prompt(case, explanation, prediction, add_context=True, explanation_method=TokenValuePairMethod.TOKEN_VAL_PAIR)
+        prompts = self.template.generate_prompt(case, explanation, prediction, add_context=True, explanation_method=TokenValuePairMethod.TOKEN_VAL_PAIR, custom_prompt=custom_prompt)
         # print(f"[DEBUG] Prompts for which explainers generated: {prompts.keys()}")
 
         responses = {}
