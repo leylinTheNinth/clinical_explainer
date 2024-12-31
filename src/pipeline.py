@@ -55,7 +55,7 @@ class Pipeline:
         self.explanation_max_tokens=explanation_max_tokens
         # print("[DEBUG] Metrics initialized.")
         self.context_explainer = ContextGroundedExplainer()
-        print("[DEBUG] Pipeline Initialized.")
+        # print("[DEBUG] Pipeline Initialized.")
         
     def process_dataset(self, split: str = 'validation', limit: int = None, generate_natural_language_explanation = False, explainer_model_type:str = "mixtral-8x7b-32768", explanation_max_tokens=None, llm_prompt_template = None) -> Generator:
         """
@@ -80,7 +80,7 @@ class Pipeline:
             print(f"Processing {len(dataset)} cases...")
 
         for case in dataset:
-            #try:
+            try:
                 print("\n" + "="*80)
                 print(f"📋 Case ID: {case.get('id', 'unknown')}")
                 print(f"Type: {case['type']}")
@@ -114,9 +114,9 @@ class Pipeline:
                 if self.metrics['total_processed'] % 10 == 0:
                     torch.cuda.empty_cache()
 
-            #except Exception as e:
-            #    self.metrics['errors'].append(str(e))
-            #    yield {'error': str(e), 'original': case}
+            except Exception as e:
+               self.metrics['errors'].append(str(e))
+               yield {'error': str(e), 'original': case}
 
         # Print final metrics
         print(f"\nProcessing complete!")

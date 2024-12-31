@@ -30,7 +30,7 @@ class ContextGroundedExplainer:
         custom_prompt = None
     ) -> str:
         prompts = self.template.generate_prompt(case, explanation, prediction, add_context=True, explanation_method=TokenValuePairMethod.TOKEN_VAL_PAIR, custom_prompt=custom_prompt)
-        print(f"[DEBUG] Prompts for which explainers generated: {prompts.keys()}")
+        # print(f"[DEBUG] Prompts for which explainers generated: {prompts.keys()}")
 
         responses = {}
         # print("________________________________________________________________________________________________________________")
@@ -51,8 +51,8 @@ class ContextGroundedExplainer:
                 stream=False,
                 stop=None,
             )
-            print(f"[DEBUG] Response received for model ({model},{explanation_type}): {completion.choices[0].message.content}")
+            # print(f"[DEBUG] Response received for model ({model},{explanation_type}): {completion.choices[0].message.content}")
             responses[explanation_type] = completion.choices[0].message.content
 
-        print(f"[DEBUG] Final responses: {responses}")
+        # print(f"[DEBUG] Final responses: {responses}")
         return responses
