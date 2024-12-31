@@ -92,7 +92,7 @@ class ContextExplainerPromptTemplate(PromptTemplate):
                 all_explanations[key] = ret_val
                 # print(f"[DEBUG] Formatted explanation for key 'shap': {ret_val}")
 
-            if key == "shapley_values":
+            if key == "token_shap":
                 print("[DEBUG] HERE I AM IN SHAPLEY VALUES")
                 token_shap = explanation["shapley_values"]
                 word_value_pairs = []
