@@ -93,10 +93,14 @@ class ContextExplainerPromptTemplate(PromptTemplate):
                 # print(f"[DEBUG] Formatted explanation for key 'shap': {ret_val}")
 
             if key == "shapley_values":
+                print("[DEBUG] HERE I AM IN SHAPLEY VALUES")
                 token_shap = explanation["shapley_values"]
                 word_value_pairs = []
+                ret_val = ""
+                print("[DEBUG] Entering for loop")
                 for key, value in token_shap.items():
                     parts = key.rsplit("_", 1)
+                    print("[DEBUG] Parts: ", parts)
                     word_value_pairs.append((parts[0], value))
                 print(f"[DEBUG] Formatting Shapley values explanation with word-value pairs: {word_value_pairs}")
                 ret_val += self.token_value_pair_to_string(word_value_pairs, explanation_method) +"\n"
