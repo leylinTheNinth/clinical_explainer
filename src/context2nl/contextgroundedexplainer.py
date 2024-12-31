@@ -29,7 +29,6 @@ class ContextGroundedExplainer:
         explanation_max_tokens = 512,
         custom_prompt = None
     ) -> str:
-        print("[DEBUG] Generating prompts with provided case, explanation, and prediction.")
         prompts = self.template.generate_prompt(case, explanation, prediction, add_context=True, explanation_method=TokenValuePairMethod.TOKEN_VAL_PAIR, custom_prompt=custom_prompt)
         # print(f"[DEBUG] Prompts for which explainers generated: {prompts.keys()}")
 
@@ -37,7 +36,7 @@ class ContextGroundedExplainer:
         # print("________________________________________________________________________________________________________________")
         for explanation_type, prompt in prompts.items():
             # print(f"[DEBUG] Generating response for model: ({model}, {explanation_type}) with prompt: {prompt}")
-            print(f"[DEBUG] Generating response for model: ({model}, {explanation_type})")
+            # print(f"[DEBUG] Generating response for model: ({model}, {explanation_type})")
             completion = self.client.chat.completions.create(
                 model=model,
                 messages=[
