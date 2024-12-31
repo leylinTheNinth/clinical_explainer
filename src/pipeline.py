@@ -58,7 +58,7 @@ class Pipeline:
         self.context_explainer = ContextGroundedExplainer()
         print("[DEBUG] Pipeline Initialized.")
         
-    def process_dataset(self, split: str = 'validation', limit: int = None, generate_natural_language_explanation = False, explainer_model_type:str = "mixtral-8x7b-32768", explanation_max_tokens=None) -> Generator:
+    def process_dataset(self, split: str = 'validation', limit: int = None, generate_natural_language_explanation = False, explainer_model_type:str = "mixtral-8x7b-32768", explanation_max_tokens=None, llm_prompt_template = None) -> Generator:
         """
         Process the dataset with the specified explainers.
 
@@ -98,7 +98,7 @@ class Pipeline:
                 if generate_natural_language_explanation:
                     if explanation_max_tokens == None:
                         explanation_max_tokens = self.explanation_max_tokens
-                    context_grounded_reasoning = self.context_explainer.generate_response(case, explanations, prediction, explainer_model_type, explanation_max_tokens)
+                    context_grounded_reasoning = self.context_explainer.generate_response(case, explanations, prediction, explainer_model_type, explanation_max_tokens, llm_prompt_template)
                     yield {
                         'prediction': prediction,
                         'explanations': explanations,
