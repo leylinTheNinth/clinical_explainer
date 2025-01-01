@@ -25,7 +25,7 @@ Dataset Links:
 ## Installation
 
 ```python
-!git clone -b automation https://github.com/Shravasti221/clinical_explainer.git
+!git clone -b automation [repository_link]
 cd clinical_explainer
 pip install -r "requirements.txt"
 ```
@@ -202,7 +202,6 @@ for case in results:
         
         data_dict[key][f"predicted_explanation"] = explanation
                     
-# Convert the dictionary into a DataFrame
 data = pd.DataFrame.from_dict(data_dict, orient="index")
 data.reset_index(inplace=True)
 data.columns = ["question", "explanation_type", "max_tokens", "correct_option", "full_answer", "predicted_explanation"]
@@ -244,13 +243,9 @@ The evaluation allows comparison of 2 texts or 2 columns of text in a dataframe 
 - **Embedding Similarity**: Based on the sentence transformer model selected from hugging face, returns pairwise cosine similarity of the embeddings of input text
 
 - **NER Overlap Score**: Based on selected Token Classification model from hugging face, identifies the Named Entities in the 2 texts are returns 
-\[
-\text{NER Overlap (Jaccard Method)} = \frac{\text{Intersection(Named Entities in Text 1, Named Entities in Text 2)}}{\text{Union(Named Entities in Text 1, Named Entities in Text 2)}}
-\]
-- \[
-\text{Weighted Score} = \text{NER\_Score} \times \text{Embedding\_similarity\_score}
-\]
-
+NER Overlap (Jaccard Method) = Intersection(Named Entities in Text 1, Named Entities in Text 2) / Union(Named Entities in Text 1, Named Entities in Text 2)
+- **Weighted Score** = NER_Score × Embedding_Similarity_Score
+ 
 Assuming the below example dataframe
 | Question                                                                 | Explanation Type | Max Tokens | Correct Option | Full Answer                                                                                                                                              | Prompt Type   | predicted_answer                                                                                           |
 |--------------------------------------------------------------------------|------------------|------------|----------------|----------------------------------------------------------------------------------------------------------------------------------------------------------|---------------|-------------------------------------------------------------------------------------------------------|
@@ -263,7 +258,8 @@ Assuming the below example dataframe
 ### Code
 ```python
 from clinical_explainer.src.evaluation import Evaluator
-evaluations = Evaluator("all-MiniLM-L6-v2", "FacebookAI/xlm-roberta-large-finetuned-conll03-english")
+evaluations = Evaluator("neuml/pubmedbert-base-embeddings", "blaze999/Medical-NER")
+# evaluations = Evaluator("all-MiniLM-L6-v2", "FacebookAI/xlm-roberta-large-finetuned-conll03-english")
 df = evaluations.compute_dataframe_similarity(data_frame, "full_answer", "predicted_answer", "prefix_for_score_columns")
 ```
 
