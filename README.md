@@ -156,7 +156,7 @@ print("Token Importance Values:")
 for token, weight in exp_list:
     print(f"Token: {token:20} Weight: {weight:.4f}")
 ```
-## Generate explanations based on the importance of tokens extracted from phase 1
+## Generate explanations based on the importance of tokens extracted from Phase.1
 ```python
 import pandas as pd
 import torch
@@ -238,6 +238,35 @@ def prompt_function(user_prefix: str, question: str, prediction: str, explanatio
             f"{user_suffix}"
             f"{assistant_prefix}")
 ```
+## Evaluation of Output:
+The evaluation allows comparison of 2 texts or 2 columns of text in a dataframe to return a similarity score.
+ 
+- **Embedding Similarity**: Based on the sentence transformer model selected from hugging face, returns pairwise cosine similarity of the embeddings of input text
+
+- **NER Overlap Score**: Based on selected Token Classification model from hugging face, identifies the Named Entities in the 2 texts are returns 
+\[
+\text{NER Overlap (Jaccard Method)} = \frac{\text{Intersection(Named Entities in Text 1, Named Entities in Text 2)}}{\text{Union(Named Entities in Text 1, Named Entities in Text 2)}}
+\]
+- \[
+\text{Weighted Score} = \text{NER\_Score} \times \text{Embedding\_similarity\_score}
+\]
+
+Assuming the below example dataframe
+| Question                                                                 | Explanation Type | Max Tokens | Correct Option | Full Answer                                                                                                                                              | Prompt Type   | predicted_answer                                                                                           |
+|--------------------------------------------------------------------------|------------------|------------|----------------|----------------------------------------------------------------------------------------------------------------------------------------------------------|---------------|-------------------------------------------------------------------------------------------------------|
+| An 18-month-old boy, with complete immunization...                      | lime             | 256        | 4              | Although other hemorrhagic diseases can have a...                                                                                                         | context+eval  | Based on the given question, the most probable...                                                   |
+| An 18-month-old boy, with complete immunization...                      | shap             | 256        | 4              | Although other hemorrhagic diseases can have a...                                                                                                         | context+eval  | The correct answer is option 4: Hemophilia A...                                                     |
+| An 18-month-old boy, with complete immunization...                      | no_context       | 256        | 4              | Although other hemorrhagic diseases can have a...                                                                                                         | no_context    | The most probable diagnostic hypothesis is opt...                                                   |
+| We are consulted by an 84-year-old woman for i...                       | lime             | 256        | 2              | Knowing that we have taken measures of sleep h...                                                                                                         | context+eval  | Based on the question, the patient is an 84-ye...                                                  |
+| We are consulted by an 84-year-old woman for i...                       | shap             | 256        | 2              | Knowing that we have taken measures of sleep h...                                                                                                         | context+eval  | Based on the question, the patient is an 84-ye...                                                  |
+
+### Code
+```python
+from clinical_explainer.src.evaluation import Evaluator
+evaluations = Evaluator("all-MiniLM-L6-v2", "FacebookAI/xlm-roberta-large-finetuned-conll03-english")
+df = evaluations.compute_dataframe_similarity(data_frame, "full_answer", "predicted_answer", "prefix_for_score_columns")
+```
+
 
 ## Citation
 ```bibtex

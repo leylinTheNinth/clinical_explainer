@@ -3,44 +3,6 @@ from sentence_transformers import SentenceTransformer
 from transformers import pipeline
 import numpy as np
 
-def calculate_baseline_similarity(text_corpus: pd.Series, sample_size=1000, model_name='all-MiniLM-L6-v2', random_state=None):
-    """
-    Calculates a baseline similarity score for text within a column of a DataFrame.
-
-    Args:
-        dataframe (pd.DataFrame): Input DataFrame containing the text column.
-        text_column (str): Name of the column containing text data.
-        sample_size (int): Number of random pairs to sample for similarity calculation.
-        model_name (str): Pretrained SentenceTransformer model name from hugging face
-        random_state (int): Seed for reproducibility.
-
-    Returns:
-        float: Baseline similarity score (average similarity for random pairs).
-    """
-    # Ensure reproducibility
-    np.random.seed(random_state)
-
-    # Extract unique sentences from the specified column
-    texts = text_corpus.dropna().unique()
-
-    # Check if there are enough sentences for sampling
-    if len(texts) < 2:
-        raise ValueError("Not enough unique texts in the column to calculate similarity.")
-    model = SentenceTransformer(model_name)
-    if sample_size >=len(text_corpus):
-        embeddings = model.encode(text_corpus)
-        similarities = model.similarity(embeddings, embeddings)
-        return similarities.triu(1).mean()
-    else:
-        mean = []
-        similarities = None
-        for i in range(5):
-            sample = text_corpus.sample(n=sample_size, random_state=42).tolist()
-            embeddings = model.encode(sample)
-            similarities = model.similarity(embeddings, embeddings)
-            mean.append(similarities.triu(1).mean())
-        return np.mean(mean)
-
 class Evaluator:
     def __init__(self, sentence_transformer_name="NeuML/pubmedbert-base-embeddings", ner_model_name="blaze999/Medical-NER"):
         self.transformer = SentenceTransformer(sentence_transformer_name)
