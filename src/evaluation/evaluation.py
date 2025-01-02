@@ -1,12 +1,15 @@
 import pandas as pd
 from sentence_transformers import SentenceTransformer
 from transformers import pipeline
+import torch
 import numpy as np
 
 class Evaluator:
     def __init__(self, sentence_transformer_name="NeuML/pubmedbert-base-embeddings", ner_model_name="blaze999/Medical-NER"):
-        self.transformer = SentenceTransformer(sentence_transformer_name)
-        self.ner_pipeline = pipeline("token-classification", model=ner_model_name)
+        if device is None:
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.transformer = SentenceTransformer(sentence_transformer_name, device=device)
+        self.ner_pipeline = pipeline("token-classification", model=ner_model_name).to(device)
 
     def compute_cosine_similarity(self, text1:str, text2:str) -> float:
         embeddings = self.transformer.encode([text1, text2])
