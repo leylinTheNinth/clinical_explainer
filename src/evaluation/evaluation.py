@@ -6,8 +6,7 @@ import numpy as np
 
 class Evaluator:
     def __init__(self, sentence_transformer_name="NeuML/pubmedbert-base-embeddings", ner_model_name="blaze999/Medical-NER"):
-        if device is None:
-            device = "cuda" if torch.cuda.is_available() else "cpu"
+        device = "cuda" if torch.cuda.is_available() else "cpu"
         self.transformer = SentenceTransformer(sentence_transformer_name, device=device)
         self.ner_pipeline = pipeline("token-classification", model=ner_model_name).to(device)
 
