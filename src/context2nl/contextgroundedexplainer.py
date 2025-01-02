@@ -35,8 +35,8 @@ class ContextGroundedExplainer:
         responses = {}
         # print("________________________________________________________________________________________________________________")
         for explanation_type, prompt in prompts.items():
-            print(f"[DEBUG] Generating response for model: ({model}, {explanation_type}) with prompt: {prompt}")
-            print(f"[DEBUG] Generating response for model: ({model}, {explanation_type})")
+            # print(f"[DEBUG] Generating response for model: ({model}, {explanation_type}) with prompt: {prompt}")
+            # print(f"[DEBUG] Generating response for model: ({model}, {explanation_type})")
             completion = self.client.chat.completions.create(
                 model=model,
                 messages=[
