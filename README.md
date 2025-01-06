@@ -61,10 +61,13 @@ from clinical_explainer.src.strategies import ModelType
 from clinical_explainer.src.pipeline import Pipeline
 
 # Initialize pipeline for BERT model
+model_name, model_type, explainer_types = "RUI525/PubMedBERT-finetune-MedMCQA-w-context", ModelType.ENCODER, ['shap', 'lime']
+# model_name, model_type, explainer_types = "google/gemma-2-2b-it", ModelType.DECODER, ['TokenShap']
+
 pipeline = Pipeline(
-    model_name="RUI525/PubMedBERT-finetune-MedMCQA-w-context",
-    model_type=ModelType.ENCODER,  
-    explainer_types=['lime', 'shap'],  
+    model_name= model_name,
+    model_type=model_type,  
+    explainer_types=explainer_types 
 )
 
 print("\n=== Starting Pipeline Processing ===")
@@ -286,4 +289,11 @@ df = evaluations.compute_dataframe_similarity(data_frame, "full_answer", "predic
       year={2023},
       eprint={2312.00567},
       archivePrefix={arXiv}
+}
+
+@article{goldshmidt2024tokenshap,
+  title={TokenSHAP: Interpreting Large Language Models with Monte Carlo Shapley Value Estimation},
+  author={Goldshmidt, Roni and Horovicz, Miriam},
+  journal={arXiv preprint arXiv:2407.10114},
+  year={2024}
 }
