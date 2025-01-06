@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Dict, List, Any, Callable
 from enum import Enum, auto
+from .token_shap_explainer import TokenSHAPModel
 
 class ExplainerType(Enum):
     """Enum for different types of explainers"""
@@ -21,4 +22,4 @@ class BaseExplainer(ABC):
         raise NotImplementedError
 
 
-__all__ = ['BaseExplainer', 'ExplainerType']
+__all__ = ['BaseExplainer', 'ExplainerType', 'TokenSHAPModel']

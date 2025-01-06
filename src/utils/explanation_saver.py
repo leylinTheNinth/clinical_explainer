@@ -160,3 +160,106 @@ def save_explanation(exp: Any,
         return save_shap_explanation(exp, case_info, save_dir)
     else:
         raise ValueError(f"Unknown explainer type: {explainer_type}")
+    
+def save_decoder_outputs(token_shap_exp: Any, 
+                        case_info: Dict,
+                        prediction: Dict,
+                        model_name: str,  # Add model_name parameter
+                        save_dir: str = "explanations") -> str:
+    """
+    Save both TokenSHAP explanation and model prediction for decoder models.
+    Args:
+        token_shap_exp: TokenSHAP object with analysis
+        case_info: Dict containing case details
+        prediction: Dict containing model's prediction
+        model_name: Name/path of the model used
+        save_dir: Directory to save outputs
+    
+    Returns:
+        str: Path where outputs were saved
+    """
+    case_id = case_info['id']
+    model_short_name = model_name.split('/')[-1]  # Get last part of model path
+    case_dir = os.path.join(save_dir, f"decoder_case_{case_id}_{model_short_name}")
+    os.makedirs(case_dir, exist_ok=True)
+    
+    try:
+        print("Saving Token Shap values and case information...")
+        essential_shap_data = {
+            'shapley_values': token_shap_exp.shapley_values,
+            'tokens': token_shap_exp.baseline_text,
+            'model_name': model_name  
+        }
+        
+        exp_path = os.path.join(case_dir, 'token_shap.pkl')
+        with open(exp_path, 'wb') as f:
+            pickle.dump(essential_shap_data, f)
+        
+        # Save prediction with model information
+        prediction_data = {
+            'prediction': prediction,
+            'model_name': model_name
+        }
+        pred_path = os.path.join(case_dir, 'prediction.pkl')
+        with open(pred_path, 'wb') as f:
+            pickle.dump(prediction_data, f)
+            
+        # Save case info
+        info_path = os.path.join(case_dir, 'case_info.pkl')
+        with open(info_path, 'wb') as f:
+            pickle.dump(case_info, f)
+
+        print(f"Successfully saved SHAP explanation for case {case_id}")
+        print(f"Model used: {model_name}")
+        return case_dir
+        
+    except Exception as e:
+        print(f"Error saving decoder outputs: {str(e)}")
+        raise
+
+def load_decoder_outputs(case_dir: str) -> Dict:
+    """
+    Load saved decoder outputs (TokenSHAP essentials and prediction)
+    
+    Args:
+        case_dir: Directory containing saved decoder outputs
+        
+    Returns:
+        Dict containing:
+            - token_shap: Dict with shapley_values and tokens
+            - prediction: Dict with model response
+            - case_info: Original case information
+            - model_name: Name of the model used
+    """
+    try:
+        # Load TokenSHAP essential data
+        exp_path = os.path.join(case_dir, 'token_shap.pkl')
+        with open(exp_path, 'rb') as f:
+            token_shap_data = pickle.load(f)
+            
+        # Load prediction
+        pred_path = os.path.join(case_dir, 'prediction.pkl')
+        with open(pred_path, 'rb') as f:
+            prediction_data = pickle.load(f)
+            
+        # Load case info
+        info_path = os.path.join(case_dir, 'case_info.pkl')
+        with open(info_path, 'rb') as f:
+            case_info = pickle.load(f)
+            
+        # Get model name from token_shap_data
+        model_name = token_shap_data.get('model_name', 'Unknown Model')
+            
+        return {
+            'token_shap': {
+                'shapley_values': token_shap_data['shapley_values'],
+                'tokens': token_shap_data['tokens']
+            },
+            'prediction': prediction_data['prediction'],
+            'case_info': case_info,
+            'model_name': model_name
+        }
+        
+    except Exception as e:
+        print(f"Error loading decoder outputs from {case_dir}: {str(e)}")
+        raise
